@@ -595,11 +595,58 @@
     getekend: 'getekend'
   };
 
+  /**
+   * Snelle aanroep voor alleen-lezen-acties: komt er na `dubbelNa` ms nog geen antwoord, dan gaat er een tweede,
+   * identieke aanroep; de eerste die antwoordt wint (vangt de uitschieters van Google Apps Script op).
+   * Na `max` ms zonder antwoord: fout (de pagina toont dan "Opnieuw proberen").
+   */
+  function apiSnel(verzoek, dubbelNa, max) {
+    if (!verzoek.token) verzoek.token = token;
+    return new Promise(function (ok, fout) {
+      var klaar = false;
+      var gestart = 0;
+      var mislukt = 0;
+      function poging() {
+        gestart++;
+        apiEenmaal(verzoek).then(function (r) {
+          if (klaar) return;
+          klaar = true;
+          clearTimeout(t1);
+          clearTimeout(t2);
+          ok(r);
+        }, function (e) {
+          mislukt++;
+          if (klaar) return;
+          if (gestart < 2) { poging(); return; }
+          if (mislukt >= gestart) { klaar = true; clearTimeout(t2); fout(e); }
+        });
+      }
+      var t1 = setTimeout(function () { if (!klaar && gestart < 2) poging(); }, dubbelNa);
+      var t2 = setTimeout(function () {
+        if (!klaar) { klaar = true; fout(new Error('Het duurt te lang')); }
+      }, max);
+      poging();
+    });
+  }
+
+  var contractGeladenOp = 0;
+  var contractStartTijd = 0;
+
+  function toonContractDeel(deel) {
+    ['contractLaden', 'contractFout', 'contractInhoud'].forEach(function (id) { $(id).hidden = id !== deel; });
+  }
+
   function startContract() {
-    toonLaden('Je contract wordt geladen…');
-    api({ actie: 'contract_start', token: contractToken }).then(function (r) {
+    // Meteen iets laten zien: logo, "Hoi!" en een laadbalk. De gegevens komen zo snel mogelijk; de PDF pas op verzoek.
+    contractStartTijd = Date.now();
+    $('scherm-melding').hidden = true;
+    $('formulier').hidden = true;
+    $('voortgang').hidden = true;
+    $('scherm-contract').hidden = false;
+    toonContractDeel('contractLaden');
+    apiSnel({ actie: 'contract_start', token: contractToken }, 6000, 20000).then(function (r) {
       if (r.status !== 'open') { toonMelding(CONTRACT_MELDINGEN[r.status] || 'fout', r.voornaam); return; }
-      Array.prototype.forEach.call(document.querySelectorAll('.voornaam'), function (el) { el.textContent = r.voornaam; });
+      $('contractKop').textContent = 'Hoi ' + r.voornaam + ', hier is je contract';
       var s = r.samenvatting;
       var rijen = [['Naam', s.naam], ['Functie', s.functie], ['Start', s.startdatum], ['Tot en met', s.einddatum],
         ['Proeftijd tot en met', s.proeftijd], ['Bruto all-in uurloon', '€ ' + s.uurloon]];
@@ -614,24 +661,78 @@
         div.appendChild(dd);
         $('contractSamenvatting').appendChild(div);
       });
+      // Leesversie: HTML van de server (tekst ge-escaped, alleen eenvoudige opmaak). Zonder leesversie: de PDF.
+      $('lezerInhoud').innerHTML = r.html || '';
+      $('contractLezen').hidden = !r.html;
+      $('contractDatum').textContent = 'Datum: ' + formatDatumNl(new Date());
+      toonContractDeel('contractInhoud');
+      contractGeladenOp = Date.now() - contractStartTijd;
+      contractHandtekening.pasAan();
+    }).catch(function () {
+      $('contractFoutTekst').textContent = 'Het laden duurt langer dan normaal of lukt nu niet. ' +
+        'Controleer je internet en probeer het opnieuw.';
+      toonContractDeel('contractFout');
+    });
+  }
+
+  $('contractOpnieuw').addEventListener('click', startContract);
+
+  // Leesweergave: volledig scherm, sluiten met ✕, vaste knop "Akkoord, naar ondertekenen" (actief na scrollen tot het einde).
+  function lezerAanHetEinde() {
+    var el = $('lezerInhoud');
+    return el.scrollTop + el.clientHeight >= el.scrollHeight - 40;
+  }
+  function werkLezerKnopBij() {
+    var eind = lezerAanHetEinde();
+    $('lezerAkkoord').disabled = !eind;
+    $('lezerHint').textContent = eind ? 'Je hebt alles gelezen.' : 'Scroll tot het einde';
+  }
+  function openLezer() {
+    $('lezer').hidden = false;
+    document.body.classList.add('lezer-open');
+    $('lezerInhoud').scrollTop = 0;
+    werkLezerKnopBij();
+    $('lezerSluit').focus();
+  }
+  function sluitLezer() {
+    $('lezer').hidden = true;
+    document.body.classList.remove('lezer-open');
+  }
+  $('contractLezen').addEventListener('click', openLezer);
+  $('lezerSluit').addEventListener('click', sluitLezer);
+  $('lezerInhoud').addEventListener('scroll', werkLezerKnopBij, { passive: true });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('lezer').hidden) sluitLezer(); });
+  $('lezerAkkoord').addEventListener('click', function () {
+    sluitLezer();
+    $('contractAkkoord').checked = true;
+    document.querySelector('[data-fout="contractAkkoord"]').textContent = '';
+    $('contractHandtekening').scrollIntoView({ block: 'center', behavior: 'smooth' });
+    contractHandtekening.pasAan();
+  });
+
+  // PDF pas ophalen als erom gevraagd wordt; daarna een echte link (opent ook in Safari zonder pop-upblokkering).
+  $('pdfDownload').addEventListener('click', function () {
+    var knop = this;
+    if (knop.dataset.url) return;
+    knop.disabled = true;
+    knop.textContent = 'PDF laden…';
+    apiSnel({ actie: 'contract_pdf', token: contractToken }, 8000, 40000).then(function (r) {
+      if (r.status !== 'ok') throw new Error();
       var bytes = Uint8Array.from(atob(r.pdf), function (c) { return c.charCodeAt(0); });
       var url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
-      $('pdfOpen').href = url;
-      $('pdfDownload').href = url;
-      $('pdfDownload').download = r.pdfNaam;
-      // Op een groot scherm lees je het contract meteen in de pagina; op een telefoon via "Contract lezen".
-      if (window.matchMedia('(min-width: 760px)').matches) {
-        $('contractPdf').src = url;
-        $('contractPdf').hidden = false;
-      }
-      $('contractDatum').textContent = 'Datum: ' + formatDatumNl(new Date());
-      $('scherm-melding').hidden = true;
-      $('voortgang').hidden = true;
-      $('scherm-contract').hidden = false;
-      contractHandtekening.pasAan();
-      window.scrollTo(0, 0);
-    }).catch(function () { toonMelding('fout'); });
-  }
+      var link = document.createElement('a');
+      link.className = 'knop licht';
+      link.href = url;
+      link.download = r.naam;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.textContent = 'PDF openen';
+      knop.replaceWith(link);
+    }).catch(function () {
+      knop.disabled = false;
+      knop.textContent = 'Downloaden (PDF) – opnieuw proberen';
+    });
+  });
 
   $('tekenKnop').addEventListener('click', function () {
     if (bezig) return;
@@ -647,13 +748,14 @@
     }
     bezig = true;
     var verzoek = { actie: 'contract_teken', token: contractToken, akkoord: true,
-      handtekening: contractHandtekening.dataUrl(), userAgent: navigator.userAgent };
+      handtekening: contractHandtekening.dataUrl(), userAgent: navigator.userAgent, laadtijdMs: contractGeladenOp };
     toonLaden('Je contract wordt ondertekend. Dit kan een halve minuut duren…');
     api(verzoek).then(function (r) {
       bezig = false;
       if (r.status === 'fouten') {
         $('scherm-melding').hidden = true;
         $('scherm-contract').hidden = false;
+        toonContractDeel('contractInhoud');
         Object.keys(r.fouten).forEach(function (k) {
           var el = document.querySelector('[data-fout="' + k + '"]');
           if (el) el.textContent = r.fouten[k];
@@ -672,7 +774,7 @@
     if (contractToken) { startContract(); return; }
     if (!token) { toonMelding('ongeldig'); return; }
     toonLaden('Even laden…');
-    api({ actie: 'intake_start' }).then(function (r) {
+    apiSnel({ actie: 'intake_start' }, 6000, 30000).then(function (r) {
       if (r.status !== 'open') { toonMelding(r.status, r.voornaam); return; }
       Array.prototype.forEach.call(document.querySelectorAll('.voornaam'), function (el) { el.textContent = r.voornaam; });
       $('email').textContent = r.email;

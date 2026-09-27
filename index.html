@@ -10,10 +10,10 @@
 <meta name="theme-color" content="#0d0d0d">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="stijl.css?v=1790529369">
+<link rel="stylesheet" href="stijl.css?v=1790530115">
 </head>
 <body>
-<div class="logo"><img src="pam.png?v=1790529369" width="120" height="120" alt="Pasta &amp; More"></div>
+<div class="logo"><img src="pam.png?v=1790530115" width="120" height="120" alt="Pasta &amp; More"></div>
 <header class="kop">
   <div class="voortgang" id="voortgang" hidden>
     <div class="voortgang-tekst"><span id="stapNummer">Stap 1 van 4</span><span id="stapTitel"></span></div>
@@ -34,27 +34,50 @@
 
   <!-- Ondertekenpagina (link #c=token) -->
   <section id="scherm-contract" class="scherm" hidden>
-    <h1>Je contract, <span class="voornaam"></span></h1>
-    <p class="intro">Lees je contract goed door. Klopt alles? Vink dan aan dat je akkoord gaat en zet je handtekening.</p>
-    <dl class="samenvatting" id="contractSamenvatting"></dl>
-    <div class="pdf-vak">
-      <iframe id="contractPdf" title="Je contract (PDF)" hidden></iframe>
+    <h1 id="contractKop">Hoi!</h1>
+
+    <div id="contractLaden" class="contract-laden" aria-live="polite">
+      <p>Je contract wordt geladen…</p>
+      <div class="laadbalk"><div></div></div>
+    </div>
+
+    <div id="contractFout" class="contract-fout" hidden>
+      <p id="contractFoutTekst">Het laden lukt nu niet. Controleer je internet en probeer het opnieuw.</p>
+      <button type="button" class="knop" id="contractOpnieuw">Opnieuw proberen</button>
+    </div>
+
+    <div id="contractInhoud" hidden>
+      <p class="intro">Lees je contract goed door. Klopt alles? Tik dan op "Akkoord, naar ondertekenen" en zet je handtekening.</p>
+      <dl class="samenvatting" id="contractSamenvatting"></dl>
       <div class="pdf-knoppen">
-        <a class="knop licht" id="pdfOpen" target="_blank" rel="noopener">Contract lezen (PDF)</a>
-        <a class="knop licht" id="pdfDownload">Downloaden</a>
+        <button type="button" class="knop" id="contractLezen">Contract lezen</button>
+        <button type="button" class="knop licht" id="pdfDownload">Downloaden (PDF)</button>
       </div>
+      <label class="vinkje"><input type="checkbox" id="contractAkkoord"> <span>Ik heb het contract gelezen en ga akkoord</span></label>
+      <div class="fout" data-fout="contractAkkoord"></div>
+      <div class="veld">
+        <label>Handtekening</label>
+        <div class="hint">Zet je handtekening in het vak. Dat kan gewoon op je telefoon.</div>
+        <div class="teken-vak"><canvas id="contractHandtekening" aria-label="Vak voor je handtekening onder het contract"></canvas></div>
+        <div class="teken-onder"><span class="hint" id="contractDatum"></span><button type="button" class="tekst-knop" id="wisContractHandtekening">Opnieuw</button></div>
+        <div class="fout" data-fout="contractHandtekening"></div>
+      </div>
+      <div class="navigatie"><button type="button" class="knop" id="tekenKnop">Contract ondertekenen</button></div>
     </div>
-    <label class="vinkje"><input type="checkbox" id="contractAkkoord"> <span>Ik heb het contract gelezen en ga akkoord</span></label>
-    <div class="fout" data-fout="contractAkkoord"></div>
-    <div class="veld">
-      <label>Handtekening</label>
-      <div class="hint">Zet je handtekening in het vak. Dat kan gewoon op je telefoon.</div>
-      <div class="teken-vak"><canvas id="contractHandtekening" aria-label="Vak voor je handtekening onder het contract"></canvas></div>
-      <div class="teken-onder"><span class="hint" id="contractDatum"></span><button type="button" class="tekst-knop" id="wisContractHandtekening">Opnieuw</button></div>
-      <div class="fout" data-fout="contractHandtekening"></div>
-    </div>
-    <div class="navigatie"><button type="button" class="knop" id="tekenKnop">Contract ondertekenen</button></div>
   </section>
+
+  <!-- Leesweergave contract (volledig scherm) -->
+  <div id="lezer" class="lezer" role="dialog" aria-modal="true" aria-labelledby="lezerTitel" hidden>
+    <div class="lezer-kop">
+      <button type="button" class="lezer-sluit" id="lezerSluit" aria-label="Sluiten">✕</button>
+      <div id="lezerTitel">Je contract</div>
+    </div>
+    <div class="lezer-inhoud" id="lezerInhoud"></div>
+    <div class="lezer-voet">
+      <div class="hint" id="lezerHint">Scroll tot het einde</div>
+      <button type="button" class="knop" id="lezerAkkoord" disabled>Akkoord, naar ondertekenen</button>
+    </div>
+  </div>
 
   <form id="formulier" novalidate hidden>
     <div class="welkom-terug" id="welkomTerug" hidden>Welkom terug! Je kunt verder waar je was. Je BSN en IBAN bewaren we
@@ -294,8 +317,8 @@
   </form>
 </main>
 
-<script src="config.js?v=1790529369"></script>
-<script src="validatie.js?v=1790529369"></script>
-<script src="app.js?v=1790529369"></script>
+<script src="config.js?v=1790530115"></script>
+<script src="validatie.js?v=1790530115"></script>
+<script src="app.js?v=1790530115"></script>
 </body>
 </html>
