@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
+<title>Aanmelden – Pasta And More</title>
+<link rel="stylesheet" href="stijl.css">
+</head>
+<body>
+<header class="kop">
+  <div class="merk">Pasta And More</div>
+  <div class="voortgang" id="voortgang" hidden>
+    <div class="voortgang-tekst"><span id="stapNummer">Stap 1 van 4</span><span id="stapTitel"></span></div>
+    <div class="balk"><div class="balk-vulling" id="balk"></div></div>
+  </div>
+</header>
+
+<main>
+  <!-- Laden / meldingen -->
+  <section id="scherm-melding" class="scherm">
+    <div class="laden" id="laden" aria-live="polite"><div class="spinner"></div><p id="ladenTekst">Even laden…</p></div>
+    <div id="melding" hidden>
+      <div class="melding-icoon" id="meldingIcoon"></div>
+      <h1 id="meldingTitel"></h1>
+      <p id="meldingTekst"></p>
+    </div>
+  </section>
+
+  <form id="formulier" novalidate hidden>
+    <!-- Stap 1 -->
+    <section class="scherm stap" data-stap="0" hidden>
+      <h1>Hoi <span class="voornaam"></span>! 👋</h1>
+      <p class="intro">Fijn dat je begint op <strong id="startdatum"></strong>. Vul hieronder je gegevens in. Dat duurt ongeveer 10 minuten.</p>
+
+      <div class="veld">
+        <label>E-mail</label>
+        <div class="vast" id="email"></div>
+      </div>
+      <div class="veld">
+        <label for="roepnaam">Roepnaam</label>
+        <input id="roepnaam" name="roepnaam" autocomplete="nickname" autocapitalize="words">
+        <div class="hint">De naam waarmee we je aanspreken.</div>
+        <div class="fout" data-fout="roepnaam"></div>
+      </div>
+      <div class="veld">
+        <label for="voornamen">Voornamen</label>
+        <input id="voornamen" name="voornamen" autocomplete="given-name" autocapitalize="words">
+        <div class="hint">Al je voornamen, zoals in je paspoort of ID-kaart.</div>
+        <div class="fout" data-fout="voornamen"></div>
+      </div>
+      <div class="rij">
+        <div class="veld smal">
+          <label for="tussenvoegsel">Tussenv.</label>
+          <input id="tussenvoegsel" name="tussenvoegsel" autocomplete="off" autocapitalize="none" placeholder="bijv. de">
+        </div>
+        <div class="veld">
+          <label for="achternaam">Achternaam</label>
+          <input id="achternaam" name="achternaam" autocomplete="family-name" autocapitalize="words">
+          <div class="fout" data-fout="achternaam"></div>
+        </div>
+      </div>
+      <div class="veld">
+        <label>Geslacht</label>
+        <div class="keuze" data-naam="geslacht">
+          <button type="button" data-waarde="man">Man</button>
+          <button type="button" data-waarde="vrouw">Vrouw</button>
+          <button type="button" data-waarde="anders">Anders</button>
+        </div>
+        <div class="fout" data-fout="geslacht"></div>
+      </div>
+      <div class="veld">
+        <label for="geboortedatum">Geboortedatum</label>
+        <input id="geboortedatum" name="geboortedatum" inputmode="numeric" placeholder="dd-mm-jjjj" autocomplete="bday" maxlength="10">
+        <div class="fout" data-fout="geboortedatum"></div>
+      </div>
+      <div class="veld">
+        <label for="geboorteplaats">Geboorteplaats</label>
+        <input id="geboorteplaats" name="geboorteplaats" autocapitalize="words">
+        <div class="fout" data-fout="geboorteplaats"></div>
+      </div>
+      <div class="rij">
+        <div class="veld">
+          <label for="geboorteland">Geboorteland</label>
+          <input id="geboorteland" name="geboorteland" value="Nederland" autocapitalize="words">
+          <div class="fout" data-fout="geboorteland"></div>
+        </div>
+        <div class="veld">
+          <label for="nationaliteit">Nationaliteit</label>
+          <input id="nationaliteit" name="nationaliteit" value="Nederlandse" autocapitalize="words">
+          <div class="fout" data-fout="nationaliteit"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stap 2 -->
+    <section class="scherm stap" data-stap="1" hidden>
+      <h1>Adres en contact</h1>
+      <div class="rij">
+        <div class="veld">
+          <label for="postcode">Postcode</label>
+          <input id="postcode" name="postcode" autocomplete="postal-code" autocapitalize="characters" placeholder="1234 AB" maxlength="7">
+          <div class="fout" data-fout="postcode"></div>
+        </div>
+        <div class="veld smal">
+          <label for="huisnummer">Huisnr.</label>
+          <input id="huisnummer" name="huisnummer" inputmode="numeric" maxlength="5">
+          <div class="fout" data-fout="huisnummer"></div>
+        </div>
+        <div class="veld smal">
+          <label for="toevoeging">Toev.</label>
+          <input id="toevoeging" name="toevoeging" autocapitalize="characters" maxlength="6">
+        </div>
+      </div>
+      <div class="veld">
+        <label for="straat">Straat</label>
+        <input id="straat" name="straat" autocomplete="address-line1" autocapitalize="words">
+        <div class="fout" data-fout="straat"></div>
+      </div>
+      <div class="veld">
+        <label for="woonplaats">Woonplaats</label>
+        <input id="woonplaats" name="woonplaats" autocomplete="address-level2" autocapitalize="words">
+        <div class="fout" data-fout="woonplaats"></div>
+      </div>
+      <div class="veld">
+        <label for="mobiel">Mobiel nummer</label>
+        <input id="mobiel" name="mobiel" type="tel" inputmode="tel" autocomplete="tel" placeholder="06 12345678">
+        <div class="fout" data-fout="mobiel"></div>
+      </div>
+
+      <h2>Noodcontact</h2>
+      <p class="hint" id="noodHint">Wie bellen we als er iets met je gebeurt tijdens het werk?</p>
+      <div class="veld">
+        <label for="noodcontact_naam">Naam</label>
+        <input id="noodcontact_naam" name="noodcontact_naam" autocapitalize="words">
+        <div class="fout" data-fout="noodcontact_naam"></div>
+      </div>
+      <div class="rij">
+        <div class="veld">
+          <label for="noodcontact_relatie">Relatie</label>
+          <input id="noodcontact_relatie" name="noodcontact_relatie" placeholder="bijv. moeder">
+          <div class="fout" data-fout="noodcontact_relatie"></div>
+        </div>
+        <div class="veld">
+          <label for="noodcontact_telefoon">Telefoon</label>
+          <input id="noodcontact_telefoon" name="noodcontact_telefoon" type="tel" inputmode="tel">
+          <div class="fout" data-fout="noodcontact_telefoon"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stap 3 -->
+    <section class="scherm stap" data-stap="2" hidden>
+      <h1>Bank en ID</h1>
+      <div class="veld">
+        <label for="bsn">BSN</label>
+        <input id="bsn" name="bsn" inputmode="numeric" autocomplete="off" maxlength="11">
+        <div class="hint">9 cijfers. Staat op je paspoort of ID-kaart.</div>
+        <div class="fout" data-fout="bsn"></div>
+      </div>
+      <div class="veld">
+        <label for="iban">IBAN</label>
+        <input id="iban" name="iban" autocomplete="off" autocapitalize="characters" placeholder="NL00 BANK 0123 4567 89" maxlength="42">
+        <div class="hint" id="ibanHint">Staat op je bankpas of in je bank-app.</div>
+        <div class="fout" data-fout="iban"></div>
+      </div>
+      <div class="veld">
+        <label>Welk ID heb je?</label>
+        <div class="keuze" data-naam="id_soort">
+          <button type="button" data-waarde="paspoort">Paspoort</button>
+          <button type="button" data-waarde="id-kaart">ID-kaart</button>
+          <button type="button" data-waarde="verblijfsdocument">Verblijfs&shy;document</button>
+        </div>
+        <div class="hint">Een rijbewijs mag niet.</div>
+        <div class="fout" data-fout="id_soort"></div>
+      </div>
+
+      <div class="fotos">
+        <div class="foto" data-foto="voor">
+          <div class="foto-titel" id="fotoVoorTitel">Voorkant</div>
+          <div class="foto-vak"><img alt="" hidden><span>Nog geen foto</span></div>
+          <div class="foto-knoppen">
+            <label class="knop licht klein">Foto maken<input type="file" accept="image/*" capture="environment" hidden></label>
+            <label class="knop licht klein">Kies foto<input type="file" accept="image/*" hidden></label>
+          </div>
+          <div class="fout" data-fout="foto_voor"></div>
+        </div>
+        <div class="foto" data-foto="achter">
+          <div class="foto-titel">Achterkant</div>
+          <div class="foto-vak"><img alt="" hidden><span>Nog geen foto</span></div>
+          <div class="foto-knoppen">
+            <label class="knop licht klein">Foto maken<input type="file" accept="image/*" capture="environment" hidden></label>
+            <label class="knop licht klein">Kies foto<input type="file" accept="image/*" hidden></label>
+          </div>
+          <div class="fout" data-fout="foto_achter"></div>
+        </div>
+      </div>
+      <p class="hint">Zorg dat alles goed leesbaar is en er geen licht op weerspiegelt.</p>
+    </section>
+
+    <!-- Stap 4 -->
+    <section class="scherm stap" data-stap="3" hidden>
+      <h1>Belasting en handtekening</h1>
+
+      <div class="veld">
+        <label>Wil je loonheffingskorting bij ons?</label>
+        <div class="uitleg">
+          Loonheffingskorting zorgt dat er minder belasting van je loon af gaat. Je mag het maar bij <strong>één</strong>
+          werkgever tegelijk aanzetten. Werk je nergens anders, of staat het bij je andere baan uit? Kies dan <strong>Ja</strong>.
+          Heb je al een baan waar het aan staat? Kies dan <strong>Nee</strong>.
+        </div>
+        <div class="keuze" data-naam="loonheffingskorting">
+          <button type="button" data-waarde="ja">Ja</button>
+          <button type="button" data-waarde="nee">Nee</button>
+        </div>
+        <div class="fout" data-fout="loonheffingskorting"></div>
+      </div>
+
+      <div class="veld">
+        <label>Alleenstaande-ouderenkorting</label>
+        <div class="uitleg">Dit is alleen voor mensen met AOW die alleen wonen. Voor jou is het antwoord bijna altijd <strong>Nee</strong>.</div>
+        <div class="keuze" data-naam="alleenstaande_ouderenkorting">
+          <button type="button" data-waarde="ja">Ja</button>
+          <button type="button" data-waarde="nee" aria-pressed="true">Nee</button>
+        </div>
+        <div class="fout" data-fout="alleenstaande_ouderenkorting"></div>
+      </div>
+
+      <div class="veld">
+        <label>Handtekening</label>
+        <div class="hint">Teken met je vinger in het vak.</div>
+        <div class="teken-vak"><canvas id="handtekening" aria-label="Vak voor je handtekening"></canvas></div>
+        <div class="teken-onder"><span class="hint" id="tekenDatum"></span><button type="button" class="tekst-knop" id="wisHandtekening">Opnieuw</button></div>
+        <div class="fout" data-fout="handtekening"></div>
+      </div>
+
+      <label class="vinkje"><input type="checkbox" id="akkoord"> <span>Mijn gegevens kloppen</span></label>
+      <div class="fout" data-fout="akkoord"></div>
+    </section>
+
+    <div class="navigatie" id="navigatie" hidden>
+      <button type="button" class="knop licht" id="terug">Terug</button>
+      <button type="submit" class="knop" id="volgende">Volgende</button>
+    </div>
+  </form>
+</main>
+
+<script src="config.js"></script>
+<script src="validatie.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

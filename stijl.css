@@ -1,0 +1,141 @@
+:root {
+  --bg: #faf7f4;
+  --kaart: #ffffff;
+  --tekst: #1f2328;
+  --zacht: #636a73;
+  --lijn: #e4dfd9;
+  --accent: #d9480f;
+  --accent-zacht: #fdebe1;
+  --knop: #1f2328;
+  --knop-tekst: #ffffff;
+  --focus: #2f6feb;
+  --fout: #c4302b;
+  --goed: #1e7a3c;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14120f;
+    --kaart: #1d1a17;
+    --tekst: #efeae4;
+    --zacht: #a59d94;
+    --lijn: #35302a;
+    --accent: #ff8a4c;
+    --accent-zacht: #3a2417;
+    --knop: #efeae4;
+    --knop-tekst: #14120f;
+    --focus: #6ea0ff;
+    --fout: #ff7b72;
+    --goed: #7fd49a;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--tekst);
+  font: 17px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+[hidden] { display: none !important; }
+
+.kop {
+  position: sticky; top: 0; z-index: 5;
+  background: var(--bg);
+  padding: calc(14px + env(safe-area-inset-top)) 16px 12px;
+  border-bottom: 1px solid var(--lijn);
+}
+.merk { max-width: 520px; margin: 0 auto; font-weight: 700; letter-spacing: -0.01em; }
+.voortgang { max-width: 520px; margin: 10px auto 0; }
+.voortgang-tekst { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--zacht); margin-bottom: 6px; }
+.balk { height: 6px; background: var(--lijn); border-radius: 99px; overflow: hidden; }
+.balk-vulling { height: 100%; width: 25%; background: var(--accent); border-radius: 99px; transition: width .25s ease; }
+
+main { max-width: 520px; margin: 0 auto; padding: 20px 16px calc(40px + env(safe-area-inset-bottom)); }
+h1 { font-size: 26px; line-height: 1.2; margin: 8px 0 8px; letter-spacing: -0.015em; }
+h2 { font-size: 19px; margin: 28px 0 4px; }
+.intro { color: var(--zacht); margin: 0 0 20px; }
+
+.veld { margin-top: 18px; flex: 1; min-width: 0; }
+.veld.smal { flex: 0 0 92px; }
+.rij { display: flex; gap: 10px; }
+.rij .veld { margin-top: 18px; }
+.veld.smal label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+label { display: block; font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+input:not([type=checkbox]) {
+  width: 100%; min-height: 50px;
+  font: inherit; color: var(--tekst);
+  background: var(--kaart);
+  border: 1px solid var(--lijn); border-radius: 12px;
+  padding: 12px 14px;
+  -webkit-appearance: none; appearance: none;
+}
+input::placeholder { color: var(--zacht); opacity: .7; }
+input:focus, button:focus-visible, .knop:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }
+input[aria-invalid="true"] { border-color: var(--fout); }
+.vast { min-height: 50px; padding: 12px 14px; border-radius: 12px; background: var(--lijn); color: var(--zacht); overflow-wrap: anywhere; }
+.hint { font-size: 14px; color: var(--zacht); margin-top: 6px; }
+.fout { font-size: 14px; color: var(--fout); margin-top: 6px; }
+.fout:empty { display: none; }
+.uitleg { font-size: 15px; color: var(--zacht); background: var(--kaart); border: 1px solid var(--lijn); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+
+.keuze { display: flex; gap: 8px; }
+.keuze button {
+  flex: 1; min-height: 50px; padding: 8px;
+  font: inherit; font-size: 16px; color: var(--tekst);
+  background: var(--kaart); border: 1px solid var(--lijn); border-radius: 12px; cursor: pointer;
+}
+.keuze button[aria-pressed="true"] { background: var(--knop); color: var(--knop-tekst); border-color: var(--knop); font-weight: 600; }
+
+.knop {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 52px; padding: 12px 18px;
+  font: inherit; font-weight: 600;
+  background: var(--knop); color: var(--knop-tekst);
+  border: 0; border-radius: 14px; cursor: pointer;
+}
+.knop:disabled { opacity: .5; cursor: default; }
+.knop.licht { background: var(--kaart); color: var(--tekst); border: 1px solid var(--lijn); }
+.knop.klein { min-height: 44px; padding: 8px 10px; font-size: 15px; flex: 1; margin: 0; }
+.tekst-knop { background: none; border: 0; color: var(--accent); font: inherit; font-size: 15px; font-weight: 600; padding: 4px 0; cursor: pointer; }
+
+.navigatie { display: flex; gap: 10px; margin-top: 32px; }
+.navigatie .knop { flex: 1; }
+.navigatie #terug { flex: 0 0 34%; }
+
+.fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
+.fotos.een { grid-template-columns: 1fr; }
+.foto-titel { font-weight: 600; font-size: 15px; margin-bottom: 6px; }
+.foto-vak {
+  aspect-ratio: 1.58; border: 1.5px dashed var(--lijn); border-radius: 12px; background: var(--kaart);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  color: var(--zacht); font-size: 14px; text-align: center; padding: 6px;
+}
+.foto-vak img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+.foto-vak.gevuld { border-style: solid; padding: 0; }
+.foto-knoppen { display: flex; gap: 6px; margin-top: 8px; }
+
+.teken-vak, .teken-onder { -webkit-user-select: none; user-select: none; }
+.teken-vak { background: #ffffff; border: 1.5px solid var(--lijn); border-radius: 12px; overflow: hidden; }
+.teken-vak canvas { display: block; width: 100%; height: 180px; touch-action: none; cursor: crosshair; }
+.teken-onder { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+
+.vinkje { display: flex; align-items: center; gap: 12px; margin-top: 24px; font-weight: 600; cursor: pointer; }
+.vinkje input { width: 24px; height: 24px; accent-color: var(--accent); margin: 0; }
+
+.laden { text-align: center; padding: 64px 0; color: var(--zacht); }
+.spinner {
+  width: 36px; height: 36px; margin: 0 auto 16px;
+  border: 3px solid var(--lijn); border-top-color: var(--accent); border-radius: 50%;
+  animation: draai 0.8s linear infinite;
+}
+@keyframes draai { to { transform: rotate(360deg); } }
+#melding { text-align: center; padding: 48px 0; }
+#melding p { color: var(--zacht); }
+.melding-icoon { font-size: 48px; line-height: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .balk-vulling { transition: none; }
+  .spinner { animation-duration: 2s; }
+}
