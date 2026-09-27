@@ -19,8 +19,7 @@
   var gewijzigd = false;
 
   // ---------- API ----------
-  function api(verzoek) {
-    verzoek.token = token;
+  function apiEenmaal(verzoek) {
     return fetch(window.PF_CONFIG.api, {
       method: 'POST',
       credentials: 'omit',
@@ -29,7 +28,23 @@
       body: JSON.stringify(verzoek)
     }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      return r.json();
+      return r.text();
+    }).then(function (t) {
+      // Google geeft bij drukte soms een HTML-foutpagina met status 200; dat telt als mislukt.
+      try { return JSON.parse(t); } catch (e) { throw new Error('Geen geldig antwoord'); }
+    });
+  }
+
+  /** Eén automatische nieuwe poging na 3 s. De server is idempotent: een tweede verstuur geeft "ingevuld". */
+  function api(verzoek) {
+    verzoek.token = token;
+    return apiEenmaal(verzoek).catch(function () {
+      return new Promise(function (ok) { setTimeout(ok, 3000); }).then(function () {
+        return apiEenmaal(verzoek).then(function (r) {
+          if (verzoek.actie === 'intake_verstuur' && r.status === 'ingevuld') r.status = 'klaar';
+          return r;
+        });
+      });
     });
   }
 
