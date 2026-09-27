@@ -7,7 +7,10 @@
 (function () {
   'use strict';
 
-  var TITELS = ['Over jou', 'Adres en contact', 'Bank en ID', 'Belasting en handtekening'];
+  var TITELS = ['Over jou', 'Adres en contact', 'Bank en ID', 'Belasting en handtekening', 'Controleren'];
+  var LAATSTE_INVULSTAP = 3;
+  var CONTROLESTAP = 4;
+  var API_TIMEOUT_MS = 90000;
   var MAX_FOTO_PX = 1600;
 
   var $ = function (id) { return document.getElementById(id); };
@@ -16,12 +19,16 @@
   var fotos = { voor: '', achter: '' };
   var keuzes = { alleenstaande_ouderenkorting: 'nee' };
   var bezig = false;
+  var startdatum = null; // Date, uit intake_start
   var gewijzigd = false;
 
   // ---------- API ----------
   function apiEenmaal(verzoek) {
+    var afbreken = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = afbreken ? setTimeout(function () { afbreken.abort(); }, API_TIMEOUT_MS) : null;
     return fetch(window.PF_CONFIG.api, {
       method: 'POST',
+      signal: afbreken ? afbreken.signal : undefined,
       credentials: 'omit',
       redirect: 'follow',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -32,10 +39,20 @@
     }).then(function (t) {
       // Google geeft bij drukte soms een HTML-foutpagina met status 200; dat telt als mislukt.
       try { return JSON.parse(t); } catch (e) { throw new Error('Geen geldig antwoord'); }
+    }).then(function (r) {
+      clearTimeout(timer);
+      if (r.status === 'fout') throw new Error('Serverfout');
+      return r;
+    }, function (e) {
+      clearTimeout(timer);
+      throw e;
     });
   }
 
-  /** Eén automatische nieuwe poging na 3 s. De server is idempotent: een tweede verstuur geeft "ingevuld". */
+  /**
+   * Eén automatische nieuwe poging na 3 s bij een netwerkfout, time-out, HTML-foutpagina of serverfout.
+   * De server is idempotent: is de eerste poging toch opgeslagen, dan geeft de tweede "ingevuld" en is het klaar.
+   */
   function api(verzoek) {
     verzoek.token = token;
     return apiEenmaal(verzoek).catch(function () {
@@ -88,12 +105,15 @@
     Array.prototype.forEach.call(document.querySelectorAll('.stap'), function (s) {
       s.hidden = Number(s.dataset.stap) !== n;
     });
-    $('stapNummer').textContent = 'Stap ' + (n + 1) + ' van 4';
+    $('stapNummer').textContent = n === CONTROLESTAP ? 'Laatste stap' : 'Stap ' + (n + 1) + ' van 4';
     $('stapTitel').textContent = TITELS[n];
-    $('balk').style.width = ((n + 1) * 25) + '%';
+    $('balk').style.width = Math.min(100, (n + 1) * 25) + '%';
     $('terug').hidden = n === 0;
-    $('volgende').textContent = n === 3 ? 'Versturen' : 'Volgende';
-    if (n === 3) handtekening.pasAan();
+    $('terug').textContent = n === CONTROLESTAP ? 'Terug om aan te passen' : 'Terug';
+    $('navigatie').classList.toggle('gestapeld', n === CONTROLESTAP);
+    $('volgende').textContent = n === CONTROLESTAP ? 'Versturen' : 'Volgende';
+    if (n === LAATSTE_INVULSTAP) handtekening.pasAan();
+    if (n === CONTROLESTAP) vulOverzicht();
     window.scrollTo(0, 0);
   }
 
@@ -108,6 +128,7 @@
     });
     Object.keys(keuzes).forEach(function (k) { g[k] = keuzes[k]; });
     g.akkoord = $('akkoord').checked;
+    g.leeftijd_bevestigd = $('leeftijd_bevestigd').checked;
     return g;
   }
 
@@ -160,7 +181,7 @@
     gewijzigd = true;
     var v = e.target.id;
     if (v === 'geboortedatum') formatteerDatum(e);
-    if (v === 'geboortedatum') werkNoodHintBij();
+    if (v === 'geboortedatum') { werkNoodHintBij(); werkLeeftijdBij(); }
     if (v === 'iban') {
       var bic = ibanGeldig(e.target.value) ? bicUitIban(e.target.value) : '';
       $('ibanHint').textContent = bic ? 'Bank herkend (' + bic + ').' : 'Staat op je bankpas of in je bank-app.';
@@ -175,6 +196,17 @@
     if (c.length >= 3) t += '-' + c.slice(2, 4);
     if (c.length >= 5) t += '-' + c.slice(4);
     e.target.value = t;
+  }
+
+  /** Vangnet: toon de leeftijd op de startdatum en laat die bevestigen; bij een nieuwe datum opnieuw bevestigen. */
+  function werkLeeftijdBij() {
+    $('leeftijd_bevestigd').checked = false;
+    var geb = leesDatumInvoer($('geboortedatum').value);
+    var tonen = !!(geb && startdatum && $('geboortedatum').value.length === 10);
+    $('leeftijdCheck').hidden = !tonen;
+    if (tonen) {
+      $('leeftijdTekst').textContent = 'Je bent op je startdatum ' + leeftijdOpDatum(geb, startdatum) + ' jaar. Klopt dat?';
+    }
   }
 
   function werkNoodHintBij() {
@@ -320,22 +352,90 @@
     };
   })();
 
+  // ---------- Controlescherm ----------
+  var OVERZICHT_OVERSLAAN = ['akkoord', 'leeftijd_bevestigd', 'bsn', 'iban'];
+
+  var OVERZICHT_LABELS = {
+    tussenvoegsel: 'Tussenvoegsel',
+    noodcontact_naam: 'Noodcontact',
+    noodcontact_relatie: 'Relatie noodcontact',
+    noodcontact_telefoon: 'Telefoon noodcontact'
+  };
+
+  function labelVan(veld) {
+    if (OVERZICHT_LABELS[veld]) return OVERZICHT_LABELS[veld];
+    var l = document.querySelector('label[for="' + veld + '"]');
+    if (!l) {
+      var groep = document.querySelector('.keuze[data-naam="' + veld + '"]');
+      l = groep && groep.parentNode.querySelector('label');
+    }
+    return l ? l.textContent.replace(/\?$/, '') : veld;
+  }
+
+  function waardeVan(veld) {
+    var groep = document.querySelector('.keuze[data-naam="' + veld + '"]');
+    if (groep) {
+      var gekozen = groep.querySelector('[aria-pressed="true"]');
+      return gekozen ? gekozen.textContent : '';
+    }
+    var el = $(veld);
+    return el ? el.value.trim() : '';
+  }
+
+  function vulOverzicht() {
+    var g = gegevens();
+    $('controleBsn').textContent = String(g.bsn || '').replace(/\D/g, '');
+    $('controleIban').textContent = normaliseerIban(g.iban).replace(/(.{4})/g, '$1 ').trim();
+    var html = '';
+    INTAKE_STAPPEN.forEach(function (velden, n) {
+      var rijen = velden.filter(function (v) { return OVERZICHT_OVERSLAAN.indexOf(v) === -1; }).map(function (v) {
+        return '<div><dt></dt><dd></dd></div>';
+      });
+      html += '<div class="overzicht-groep" data-groep="' + n + '"><div class="overzicht-kop"><h2></h2>' +
+        '<button type="button" class="tekst-knop" data-naar="' + n + '">Aanpassen</button></div><dl>' + rijen.join('') +
+        (n === LAATSTE_INVULSTAP ? '<div><dt>Handtekening</dt><dd><img alt="Je handtekening"></dd></div>' : '') + '</dl></div>';
+    });
+    $('overzicht').innerHTML = html;
+    // Teksten via textContent: ingevulde waarden nooit als HTML.
+    INTAKE_STAPPEN.forEach(function (velden, n) {
+      var groep = document.querySelector('[data-groep="' + n + '"]');
+      groep.querySelector('h2').textContent = TITELS[n];
+      var dts = groep.querySelectorAll('dt');
+      var dds = groep.querySelectorAll('dd');
+      velden.filter(function (v) { return OVERZICHT_OVERSLAAN.indexOf(v) === -1; }).forEach(function (v, i) {
+        dts[i].textContent = labelVan(v);
+        dds[i].textContent = waardeVan(v) || '–';
+      });
+      if (n === LAATSTE_INVULSTAP) groep.querySelector('img').src = handtekening.dataUrl();
+    });
+  }
+
+  $('overzicht').addEventListener('click', function (e) {
+    var knop = e.target.closest('[data-naar]');
+    if (knop) toonStap(Number(knop.dataset.naar));
+  });
+
   // ---------- Navigatie ----------
-  $('terug').addEventListener('click', function () { if (stap > 0) toonStap(stap - 1); });
+  $('terug').addEventListener('click', function () {
+    if (stap === CONTROLESTAP) toonStap(2); // BSN en IBAN staan in "Bank en ID"
+    else if (stap > 0) toonStap(stap - 1);
+  });
 
   $('formulier').addEventListener('submit', function (e) {
     e.preventDefault();
     if (bezig) return;
-    var fouten = foutenVanStap(stap);
-    toonFouten(fouten, stap);
-    if (Object.keys(fouten).length) { focusEersteFout(fouten); return; }
-    if (stap < 3) { toonStap(stap + 1); return; }
+    if (stap <= LAATSTE_INVULSTAP) {
+      var fouten = foutenVanStap(stap);
+      toonFouten(fouten, stap);
+      if (Object.keys(fouten).length) { focusEersteFout(fouten); return; }
+    }
+    if (stap < CONTROLESTAP) { toonStap(stap + 1); return; }
     verstuur();
   });
 
   function verstuur() {
     // Laatste controle over alle stappen samen.
-    for (var n = 0; n < 4; n++) {
+    for (var n = 0; n <= LAATSTE_INVULSTAP; n++) {
       var f = foutenVanStap(n);
       if (Object.keys(f).length) { toonStap(n); toonFouten(f, n); focusEersteFout(f); return; }
     }
@@ -360,8 +460,8 @@
       toonMelding(r.status === 'klaar' ? 'klaar' : r.status, r.voornaam);
     }).catch(function () {
       bezig = false;
-      toonStap(3);
-      toonFouten({ akkoord: 'Versturen lukte niet. Controleer je internet en probeer het opnieuw.' }, 3);
+      toonStap(LAATSTE_INVULSTAP);
+      toonFouten({ akkoord: 'Versturen lukte niet. Controleer je internet en probeer het opnieuw.' }, LAATSTE_INVULSTAP);
     });
   }
 
@@ -378,6 +478,7 @@
       Array.prototype.forEach.call(document.querySelectorAll('.voornaam'), function (el) { el.textContent = r.voornaam; });
       $('email').textContent = r.email;
       $('startdatum').textContent = r.startdatum;
+      startdatum = leesDatumInvoer(r.startdatum);
       $('tekenDatum').textContent = 'Datum: ' + formatDatumNl(new Date());
       toonStap(0);
     }).catch(function () { toonMelding('fout'); });

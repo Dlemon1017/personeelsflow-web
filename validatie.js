@@ -93,7 +93,8 @@ var INTAKE_KEUZES = {
 
 /** Velden per stap; gebruikt door de pagina (per scherm valideren) en de server (alles). */
 var INTAKE_STAPPEN = [
-  ['roepnaam', 'voornamen', 'tussenvoegsel', 'achternaam', 'geslacht', 'geboortedatum', 'geboorteplaats', 'geboorteland', 'nationaliteit'],
+  ['roepnaam', 'voornamen', 'tussenvoegsel', 'achternaam', 'geslacht', 'geboortedatum', 'leeftijd_bevestigd', 'geboorteplaats',
+    'geboorteland', 'nationaliteit'],
   ['straat', 'huisnummer', 'toevoeging', 'postcode', 'woonplaats', 'mobiel', 'noodcontact_naam', 'noodcontact_relatie', 'noodcontact_telefoon'],
   ['bsn', 'iban', 'id_soort'],
   ['loonheffingskorting', 'alleenstaande_ouderenkorting', 'akkoord']
@@ -197,6 +198,10 @@ function valideerIntake(g, stap, vandaag) {
         t = tekst(v).toLowerCase();
         if (INTAKE_KEUZES.ja_nee.indexOf(t) === -1) fouten[v] = 'Kies ja of nee.';
         schoon[v] = t;
+        break;
+      case 'leeftijd_bevestigd':
+        // Vangnet: de medewerker bevestigt de leeftijd op de startdatum die uit de geboortedatum volgt.
+        if (geb && g.leeftijd_bevestigd !== true) fouten[v] = 'Vink aan dat je leeftijd klopt, of pas je geboortedatum aan.';
         break;
       case 'akkoord':
         if (g.akkoord !== true && g.akkoord !== 'ja') fouten[v] = 'Vink aan dat je gegevens kloppen.';

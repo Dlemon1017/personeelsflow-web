@@ -76,6 +76,11 @@
         <input id="geboortedatum" name="geboortedatum" inputmode="numeric" placeholder="dd-mm-jjjj" autocomplete="bday" maxlength="10">
         <div class="fout" data-fout="geboortedatum"></div>
       </div>
+      <div class="leeftijd-check" id="leeftijdCheck" hidden>
+        <p id="leeftijdTekst"></p>
+        <label class="vinkje"><input type="checkbox" id="leeftijd_bevestigd"> <span>Ja, klopt</span></label>
+        <div class="fout" data-fout="leeftijd_bevestigd"></div>
+      </div>
       <div class="veld">
         <label for="geboorteplaats">Geboorteplaats</label>
         <input id="geboorteplaats" name="geboorteplaats" autocapitalize="words">
@@ -238,6 +243,15 @@
 
       <label class="vinkje"><input type="checkbox" id="akkoord"> <span>Mijn gegevens kloppen</span></label>
       <div class="fout" data-fout="akkoord"></div>
+    </section>
+
+    <!-- Controle vóór versturen -->
+    <section class="scherm stap" data-stap="4" hidden>
+      <h1>Kloppen je gegevens?</h1>
+      <div class="let-op">Let op: kloppen je gegevens? Controleer vooral je BSN en IBAN nog één keer.</div>
+      <div class="groot-veld"><div class="groot-label">BSN</div><div class="groot-waarde" id="controleBsn"></div></div>
+      <div class="groot-veld"><div class="groot-label">IBAN</div><div class="groot-waarde" id="controleIban"></div></div>
+      <div id="overzicht"></div>
     </section>
 
     <div class="navigatie" id="navigatie" hidden>

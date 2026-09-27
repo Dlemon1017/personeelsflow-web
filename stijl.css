@@ -103,6 +103,8 @@ input[aria-invalid="true"] { border-color: var(--fout); }
 .navigatie { display: flex; gap: 10px; margin-top: 32px; }
 .navigatie .knop { flex: 1; }
 .navigatie #terug { flex: 0 0 34%; }
+.navigatie.gestapeld { flex-direction: column-reverse; }
+.navigatie.gestapeld .knop, .navigatie.gestapeld #terug { flex: none; width: 100%; }
 
 .fotos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 22px; }
 .fotos.een { grid-template-columns: 1fr; }
@@ -139,3 +141,23 @@ input[aria-invalid="true"] { border-color: var(--fout); }
   .balk-vulling { transition: none; }
   .spinner { animation-duration: 2s; }
 }
+
+.leeftijd-check { margin-top: 10px; background: var(--accent-zacht); border-radius: 12px; padding: 12px 14px; }
+.leeftijd-check p { margin: 0; font-weight: 600; }
+.leeftijd-check .vinkje { margin-top: 10px; }
+
+.let-op { background: var(--accent-zacht); border-left: 4px solid var(--accent); border-radius: 10px; padding: 12px 14px;
+  font-weight: 600; margin: 8px 0 18px; }
+.groot-veld { background: var(--kaart); border: 1px solid var(--lijn); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+.groot-label { font-size: 13px; color: var(--zacht); font-weight: 600; }
+.groot-waarde { font-size: clamp(19px, 5.6vw, 24px); font-weight: 700; letter-spacing: 0.03em; font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere; }
+.overzicht-groep { margin-top: 22px; }
+.overzicht-kop { display: flex; justify-content: space-between; align-items: baseline; }
+.overzicht-kop h2 { margin: 0 0 6px; font-size: 17px; }
+.overzicht dl, #overzicht dl { margin: 0; background: var(--kaart); border: 1px solid var(--lijn); border-radius: 12px; padding: 4px 14px; }
+#overzicht dl div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--lijn); }
+#overzicht dl div:first-child { border-top: 0; }
+#overzicht dt { color: var(--zacht); font-size: 15px; }
+#overzicht dd { margin: 0; text-align: right; font-size: 15px; overflow-wrap: anywhere; }
+#overzicht img { max-width: 140px; max-height: 50px; background: #fff; border-radius: 6px; }
