@@ -617,11 +617,12 @@
         }, function (e) {
           mislukt++;
           if (klaar) return;
-          if (gestart < 2) { poging(); return; }
+          // Foutpagina van Google of netwerkfout: na een korte pauze opnieuw (maximaal 3 pogingen).
+          if (gestart < 3) { setTimeout(function () { if (!klaar) poging(); }, 400); return; }
           if (mislukt >= gestart) { klaar = true; clearTimeout(t2); fout(e); }
         });
       }
-      var t1 = setTimeout(function () { if (!klaar && gestart < 2) poging(); }, dubbelNa);
+      var t1 = setTimeout(function () { if (!klaar && gestart < 3) poging(); }, dubbelNa);
       var t2 = setTimeout(function () {
         if (!klaar) { klaar = true; fout(new Error('Het duurt te lang')); }
       }, max);
