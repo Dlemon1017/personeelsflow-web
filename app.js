@@ -453,9 +453,11 @@
   }
 
   // ---------- Controlescherm ----------
-  var OVERZICHT_OVERSLAAN = ['akkoord', 'leeftijd_bevestigd', 'bsn', 'iban'];
+  // Huisnummer en toevoeging staan in de regel "Adres" (bij straat).
+  var OVERZICHT_OVERSLAAN = ['akkoord', 'leeftijd_bevestigd', 'bsn', 'iban', 'huisnummer', 'toevoeging'];
 
   var OVERZICHT_LABELS = {
+    straat: 'Adres',
     tussenvoegsel: 'Tussenvoegsel',
     noodcontact_naam: 'Noodcontact',
     noodcontact_relatie: 'Relatie noodcontact',
@@ -478,6 +480,9 @@
     if (groep) {
       var gekozen = groep.querySelector('[aria-pressed="true"]');
       return gekozen ? gekozen.textContent : '';
+    }
+    if (veld === 'straat') {
+      return (schoon.straat || $('straat').value.trim()) + ' ' + huisnummerMetToevoeging($('huisnummer').value, $('toevoeging').value);
     }
     if (schoon && typeof schoon[veld] === 'string' && schoon[veld]) return schoon[veld];
     var el = $(veld);

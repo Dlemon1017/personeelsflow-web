@@ -65,6 +65,17 @@ function normaliseerTelefoon(tel) {
   return '';
 }
 
+/**
+ * Huisnummer met toevoeging zoals op een adres: "12a", "12A", "12bis"; begint de toevoeging met een cijfer,
+ * dan met een streepje ("12-2") om verwarring met "122" te voorkomen.
+ */
+function huisnummerMetToevoeging(huisnummer, toevoeging) {
+  var nr = String(huisnummer == null ? '' : huisnummer).trim();
+  var t = String(toevoeging == null ? '' : toevoeging).trim().replace(/^[-\s]+/, '');
+  if (!t) return nr;
+  return nr + (/^\d/.test(t) ? '-' : '') + t;
+}
+
 /** "dd-mm-jjjj" of "jjjj-mm-dd" (date-input) → Date; ongeldig → null. */
 function leesDatumInvoer(tekst) {
   var t = String(tekst || '').trim();
