@@ -277,7 +277,31 @@
     return {
       pasAan: pasAan,
       getekend: function () { return lengte > 80; },
-      dataUrl: function () { return canvas.toDataURL('image/png'); }
+      // Bijgesneden tot de getekende lijnen (plus marge), zodat de handtekening het vak in de PDF vult.
+      dataUrl: function () {
+        var w = canvas.width, h = canvas.height;
+        var px = ctx.getImageData(0, 0, w, h).data;
+        var x0 = w, y0 = h, x1 = -1, y1 = -1;
+        for (var y = 0; y < h; y++) {
+          for (var x = 0; x < w; x++) {
+            if (px[(y * w + x) * 4 + 3] > 16) {
+              if (x < x0) x0 = x;
+              if (x > x1) x1 = x;
+              if (y < y0) y0 = y;
+              if (y > y1) y1 = y;
+            }
+          }
+        }
+        if (x1 < 0) return canvas.toDataURL('image/png');
+        var marge = Math.round(6 * (window.devicePixelRatio || 1));
+        x0 = Math.max(0, x0 - marge); y0 = Math.max(0, y0 - marge);
+        x1 = Math.min(w - 1, x1 + marge); y1 = Math.min(h - 1, y1 + marge);
+        var uit = document.createElement('canvas');
+        uit.width = x1 - x0 + 1;
+        uit.height = y1 - y0 + 1;
+        uit.getContext('2d').drawImage(canvas, x0, y0, uit.width, uit.height, 0, 0, uit.width, uit.height);
+        return uit.toDataURL('image/png');
+      }
     };
   })();
 
