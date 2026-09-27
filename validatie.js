@@ -85,6 +85,40 @@ function leeftijdOpDatum(geb, datum) {
   return l;
 }
 
+/** Woorden die binnen een naam of plaatsnaam klein blijven (niet als eerste woord). */
+var KLEINE_WOORDEN = ['van', 'de', 'der', 'den', 'het', 'ten', 'ter', 'te', 'in', 'op', 'aan', 'bij', 'en', 'uit',
+  'onder', 'over', 'voor', "'t", "'s", 'la', 'le', 'du', 'da', 'di', 'del', 'dos', 'das', 'von', 'zu', 'y'];
+
+/** "ijsselmuiden" → "IJsselmuiden", "anne-marie" → "Anne-Marie", "o'brien" → "O'Brien", "'s-hertogenbosch" → "'s-Hertogenbosch". */
+function hoofdletterWoord_(w) {
+  var voor = /^('[st]-)(.+)$/i.exec(w);
+  if (voor) return voor[1].toLowerCase() + hoofdletterWoord_(voor[2]);
+  return w.split(/([-'’])/).map(function (deel) {
+    if (!deel || /^[-'’]$/.test(deel)) return deel;
+    var l = deel.toLowerCase();
+    if (/^\d/.test(l)) return l;
+    if (l.indexOf('ij') === 0) return 'IJ' + l.slice(2);
+    return l.charAt(0).toUpperCase() + l.slice(1);
+  }).join('');
+}
+
+/**
+ * Nette hoofdletters bij opslaan. soort: 'naam' (namen, plaatsen, straten) of 'tussenvoegsel' (alles klein).
+ * Alleen woorden die helemaal klein of helemaal hoofdletters zijn, worden aangepast; "McDonald" blijft staan.
+ */
+function netteHoofdletters(tekst, soort) {
+  var t = String(tekst == null ? '' : tekst).replace(/\s+/g, ' ').trim();
+  if (soort === 'tussenvoegsel') return t.toLowerCase();
+  return t.split(' ').map(function (w, i) {
+    if (!w) return w;
+    var gemengd = /[a-zà-ÿ]/.test(w) && /[A-ZÀ-Þ]/.test(w);
+    if (gemengd) return w;
+    var l = w.toLowerCase();
+    if (i > 0 && KLEINE_WOORDEN.indexOf(l) !== -1) return l;
+    return hoofdletterWoord_(w);
+  }).join(' ');
+}
+
 var INTAKE_KEUZES = {
   geslacht: ['man', 'vrouw', 'anders'],
   id_soort: ['paspoort', 'id-kaart', 'verblijfsdocument'],
@@ -122,6 +156,8 @@ function valideerIntake(g, stap, vandaag) {
     var t;
     switch (v) {
       case 'tussenvoegsel':
+        schoon[v] = netteHoofdletters(tekst(v), 'tussenvoegsel');
+        break;
       case 'toevoeging':
         schoon[v] = tekst(v);
         break;
@@ -133,7 +169,7 @@ function valideerIntake(g, stap, vandaag) {
       case 'nationaliteit':
       case 'straat':
       case 'woonplaats':
-        schoon[v] = verplicht(v);
+        schoon[v] = netteHoofdletters(verplicht(v), 'naam');
         break;
       case 'geslacht':
         t = tekst(v).toLowerCase();
@@ -164,7 +200,7 @@ function valideerIntake(g, stap, vandaag) {
       case 'noodcontact_relatie':
         t = tekst(v);
         if (!t && minderjarig) fouten[v] = 'Verplicht omdat je jonger bent dan 18.';
-        schoon[v] = t;
+        schoon[v] = v === 'noodcontact_naam' ? netteHoofdletters(t, 'naam') : t;
         break;
       case 'noodcontact_telefoon':
         t = tekst(v);

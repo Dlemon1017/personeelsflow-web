@@ -30,6 +30,8 @@
   </section>
 
   <form id="formulier" novalidate hidden>
+    <div class="welkom-terug" id="welkomTerug" hidden>Welkom terug! Je kunt verder waar je was. Je BSN en IBAN bewaren we
+      niet tussentijds; die vul je aan het eind opnieuw in.</div>
     <!-- Stap 1 -->
     <section class="scherm stap" data-stap="0" hidden>
       <h1>Hoi <span class="voornaam"></span>! 👋</h1>
@@ -257,6 +259,10 @@
     <div class="navigatie" id="navigatie" hidden>
       <button type="button" class="knop licht" id="terug">Terug</button>
       <button type="submit" class="knop" id="volgende">Volgende</button>
+    </div>
+    <div class="later">
+      <button type="button" class="tekst-knop" id="later">Later verder</button>
+      <div class="fout" id="laterFout"></div>
     </div>
   </form>
 </main>

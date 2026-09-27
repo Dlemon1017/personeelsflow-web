@@ -16,7 +16,10 @@
   var $ = function (id) { return document.getElementById(id); };
   var token = (/[#&]t=([A-Za-z0-9]{32,})/.exec(location.hash) || [])[1] || '';
   var stap = 0;
-  var fotos = { voor: '', achter: '' };
+  var fotos = { voor: '', achter: '' };          // nieuw gekozen foto's (data-URL)
+  var opServer = { voor: false, achter: false }; // al tussentijds opgeslagen
+  var bewaardTot = 0;                             // aantal afgeronde stappen op de server
+  var bewaarKetting = Promise.resolve();
   var keuzes = { alleenstaande_ouderenkorting: 'nee' };
   var bezig = false;
   var startdatum = null; // Date, uit intake_start
@@ -79,6 +82,7 @@
     ongeldig: ['🔒', 'Link werkt niet', 'Deze link is niet (meer) geldig. Stuur een WhatsApp-bericht als je hulp nodig hebt.'],
     verlopen: ['⏰', 'Link verlopen', 'Deze link is verlopen. Stuur een WhatsApp-bericht, dan krijg je een nieuwe.'],
     ingevuld: ['✅', 'Al ingevuld', 'Je gegevens zijn al binnen. Bedankt!'],
+    later: ['💾', 'Bewaard', 'Je gegevens zijn bewaard. Open de link uit je mail als je je BSN en bankpas bij de hand hebt.'],
     klaar: ['🎉', 'Bedankt!', 'Je gegevens zijn goed ontvangen. Je krijgt binnenkort een mail om je contract te tekenen.'],
     fout: ['😕', 'Er ging iets mis', 'Probeer het over een paar minuten opnieuw. Lukt het niet? Stuur een WhatsApp-bericht.']
   };
@@ -152,8 +156,8 @@
   function foutenVanStap(n) {
     var f = valideerIntake(gegevens(), n, new Date()).fouten;
     if (n === 2) {
-      if (!fotos.voor) f.foto_voor = 'Voeg een foto toe.';
-      if (!fotos.achter && achterkantNodig(keuzes.id_soort)) f.foto_achter = 'Voeg een foto toe.';
+      if (!fotos.voor && !opServer.voor) f.foto_voor = 'Voeg een foto toe.';
+      if (!fotos.achter && !opServer.achter && achterkantNodig(keuzes.id_soort)) f.foto_achter = 'Voeg een foto toe.';
     }
     if (n === 3 && !handtekening.getekend()) f.handtekening = 'Zet je handtekening.';
     return f;
@@ -253,6 +257,7 @@
         foutEl.textContent = '';
         verklein(bestand).then(function (dataUrl) {
           fotos[kant] = dataUrl;
+          opServer[kant] = false;
           gewijzigd = true;
           var img = vak.querySelector('img');
           img.src = dataUrl;
@@ -352,6 +357,83 @@
     };
   })();
 
+  // ---------- Tussentijds opslaan ----------
+  var NIET_TUSSENTIJDS = ['bsn', 'iban', 'handtekening', 'akkoord'];
+
+  function foutenVoorBewaren(n) {
+    var f = foutenVanStap(n);
+    NIET_TUSSENTIJDS.forEach(function (k) { delete f[k]; });
+    return f;
+  }
+
+  /** Slaat stap n op de achtergrond op (op volgorde); de medewerker hoeft niet te wachten. */
+  function bewaar(n) {
+    var verzoek = { actie: 'intake_bewaar', stap: n, gegevens: gegevens(), fotos: {} };
+    delete verzoek.gegevens.bsn;
+    delete verzoek.gegevens.iban;
+    if (n === 2) {
+      ['voor', 'achter'].forEach(function (k) {
+        if (fotos[k] && !opServer[k] && (k === 'voor' || achterkantNodig(keuzes.id_soort))) verzoek.fotos[k] = fotos[k];
+      });
+    }
+    bewaarKetting = bewaarKetting.then(function () {
+      return api(verzoek).then(function (r) {
+        if (r.status !== 'bewaard') return;
+        bewaardTot = Math.max(bewaardTot, r.stap);
+        (r.fotos || []).forEach(function (k) { opServer[k] = true; fotos[k] = ''; });
+      });
+    }).catch(function () { /* stil: bij versturen gaat alles alsnog mee */ });
+    return bewaarKetting;
+  }
+
+  $('later').addEventListener('click', function () {
+    var knop = this;
+    $('laterFout').textContent = '';
+    if (stap <= LAATSTE_INVULSTAP && !Object.keys(foutenVoorBewaren(stap)).length) bewaar(stap);
+    knop.disabled = true;
+    knop.textContent = 'Bewaren…';
+    bewaarKetting.then(function () {
+      knop.disabled = false;
+      knop.textContent = 'Later verder';
+      if (!bewaardTot) {
+        $('laterFout').textContent = 'Vul eerst deze stap helemaal in, dan kunnen we je gegevens bewaren.';
+        return;
+      }
+      gewijzigd = false;
+      toonMelding('later');
+    });
+  });
+
+  /** Eerder bewaarde gegevens terugzetten en verder gaan waar de medewerker was. */
+  function vulConcept(c) {
+    Object.keys(c.gegevens).forEach(function (v) {
+      var groep = document.querySelector('.keuze[data-naam="' + v + '"]');
+      if (groep) {
+        keuzes[v] = c.gegevens[v];
+        Array.prototype.forEach.call(groep.children, function (b) {
+          b.setAttribute('aria-pressed', String(b.dataset.waarde === c.gegevens[v]));
+        });
+        return;
+      }
+      var el = $(v);
+      if (el && el.tagName === 'INPUT') el.value = c.gegevens[v];
+    });
+    werkNoodHintBij();
+    werkLeeftijdBij();
+    $('leeftijd_bevestigd').checked = c.stap >= 1; // stap 1 kan alleen af met een bevestigde leeftijd
+    pasFotosAan();
+    ['voor', 'achter'].forEach(function (k) {
+      opServer[k] = !!c.fotos[k];
+      if (!opServer[k]) return;
+      var vak = document.querySelector('[data-foto="' + k + '"] .foto-vak');
+      vak.querySelector('span').textContent = 'Al opgeslagen ✓';
+      vak.querySelector('span').className = 'opgeslagen';
+    });
+    bewaardTot = c.stap;
+    $('welkomTerug').hidden = false;
+    toonStap(Math.min(c.stap, LAATSTE_INVULSTAP));
+  }
+
   // ---------- Controlescherm ----------
   var OVERZICHT_OVERSLAAN = ['akkoord', 'leeftijd_bevestigd', 'bsn', 'iban'];
 
@@ -372,18 +454,21 @@
     return l ? l.textContent.replace(/\?$/, '') : veld;
   }
 
-  function waardeVan(veld) {
+  /** Waarde zoals die wordt opgeslagen (nette hoofdletters, postcode "1234 AB"); anders zoals ingevuld. */
+  function waardeVan(veld, schoon) {
     var groep = document.querySelector('.keuze[data-naam="' + veld + '"]');
     if (groep) {
       var gekozen = groep.querySelector('[aria-pressed="true"]');
       return gekozen ? gekozen.textContent : '';
     }
+    if (schoon && typeof schoon[veld] === 'string' && schoon[veld]) return schoon[veld];
     var el = $(veld);
     return el ? el.value.trim() : '';
   }
 
   function vulOverzicht() {
     var g = gegevens();
+    var schoon = valideerIntake(g, null, new Date()).schoon;
     $('controleBsn').textContent = String(g.bsn || '').replace(/\D/g, '');
     $('controleIban').textContent = normaliseerIban(g.iban).replace(/(.{4})/g, '$1 ').trim();
     var html = '';
@@ -404,7 +489,7 @@
       var dds = groep.querySelectorAll('dd');
       velden.filter(function (v) { return OVERZICHT_OVERSLAAN.indexOf(v) === -1; }).forEach(function (v, i) {
         dts[i].textContent = labelVan(v);
-        dds[i].textContent = waardeVan(v) || '–';
+        dds[i].textContent = waardeVan(v, schoon) || '–';
       });
       if (n === LAATSTE_INVULSTAP) groep.querySelector('img').src = handtekening.dataUrl();
     });
@@ -429,7 +514,11 @@
       toonFouten(fouten, stap);
       if (Object.keys(fouten).length) { focusEersteFout(fouten); return; }
     }
-    if (stap < CONTROLESTAP) { toonStap(stap + 1); return; }
+    if (stap < CONTROLESTAP) {
+      if (stap <= LAATSTE_INVULSTAP) bewaar(stap);
+      toonStap(stap + 1);
+      return;
+    }
     verstuur();
   });
 
@@ -443,11 +532,11 @@
     var verzoek = {
       actie: 'intake_verstuur',
       gegevens: gegevens(),
-      fotos: { voor: fotos.voor, achter: achterkantNodig(keuzes.id_soort) ? fotos.achter : '' },
+      fotos: { voor: opServer.voor ? '' : fotos.voor, achter: achterkantNodig(keuzes.id_soort) && !opServer.achter ? fotos.achter : '' },
       handtekening: handtekening.dataUrl()
     };
     toonLaden('Je gegevens worden verstuurd. Dit kan een halve minuut duren…');
-    api(verzoek).then(function (r) {
+    bewaarKetting.then(function () { return api(verzoek); }).then(function (r) {
       bezig = false;
       if (r.status === 'fouten') {
         var eerste = Math.min.apply(null, Object.keys(r.fouten).map(stapVan).filter(function (s) { return s >= 0; }));
@@ -480,7 +569,8 @@
       $('startdatum').textContent = r.startdatum;
       startdatum = leesDatumInvoer(r.startdatum);
       $('tekenDatum').textContent = 'Datum: ' + formatDatumNl(new Date());
-      toonStap(0);
+      if (r.concept) vulConcept(r.concept);
+      else toonStap(0);
     }).catch(function () { toonMelding('fout'); });
   }
 
