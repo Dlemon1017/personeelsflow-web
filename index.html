@@ -10,10 +10,10 @@
 <meta name="theme-color" content="#0d0d0d">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="stijl.css?v=1790537993">
+<link rel="stylesheet" href="stijl.css?v=1790539018">
 </head>
 <body>
-<div class="logo"><img src="pam.png?v=1790537993" width="120" height="120" alt="Pasta &amp; More"></div>
+<div class="logo"><img src="pam.png?v=1790539018" width="120" height="120" alt="Pasta &amp; More"></div>
 <header class="kop">
   <div class="voortgang" id="voortgang" hidden>
     <div class="voortgang-tekst"><span id="stapNummer">Stap 1 van 4</span><span id="stapTitel"></span></div>
@@ -299,12 +299,20 @@
       <h1>Bank en ID</h1>
       <div class="veld">
         <label for="bsn">BSN</label>
+        <div class="bekend" data-bekend="bsn" hidden>
+          <div class="bekend-waarde">Bij ons bekend: <strong data-masker="bsn"></strong></div>
+          <div class="keuze" data-naam="bsn_keuze"><button type="button" data-waarde="klopt" aria-pressed="false">Dit klopt</button><button type="button" data-waarde="wijzigen" aria-pressed="false">Wijzigen</button></div>
+        </div>
         <input id="bsn" name="bsn" inputmode="numeric" autocomplete="off" maxlength="11">
         <div class="hint">9 cijfers. Staat op je paspoort of ID-kaart.</div>
         <div class="fout" data-fout="bsn"></div>
       </div>
       <div class="veld">
         <label for="iban">IBAN</label>
+        <div class="bekend" data-bekend="iban" hidden>
+          <div class="bekend-waarde">Bij ons bekend: <strong data-masker="iban"></strong></div>
+          <div class="keuze" data-naam="iban_keuze"><button type="button" data-waarde="klopt" aria-pressed="false">Dit klopt</button><button type="button" data-waarde="wijzigen" aria-pressed="false">Wijzigen</button></div>
+        </div>
         <input id="iban" name="iban" autocomplete="off" autocapitalize="characters" placeholder="NL00 BANK 0123 4567 89" maxlength="42">
         <div class="hint" id="ibanHint">Staat op je bankpas of in je bank-app.</div>
         <div class="fout" data-fout="iban"></div>
@@ -404,9 +412,9 @@
   </form>
 </main>
 
-<script src="config.js?v=1790537993"></script>
-<script src="validatie.js?v=1790537993"></script>
-<script src="adres.js?v=1790537993"></script>
-<script src="app.js?v=1790537993"></script>
+<script src="config.js?v=1790539018"></script>
+<script src="validatie.js?v=1790539018"></script>
+<script src="adres.js?v=1790539018"></script>
+<script src="app.js?v=1790539018"></script>
 </body>
 </html>

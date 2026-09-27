@@ -209,3 +209,8 @@ body.lezer-open { overflow: hidden; }
 
 /* Adres opzoeken (PDOK) */
 .adres-melding { font-size: 14px; color: var(--geel, #e0b04a); margin: -4px 0 12px; }
+
+/* Correctie "Bank en ID": bekende BSN/IBAN gemaskeerd met keuze Dit klopt / Wijzigen */
+.bekend { margin-bottom: 10px; }
+.bekend-waarde { margin-bottom: 8px; color: var(--grijs, #aaa); }
+.bekend-waarde strong { color: var(--tekst); letter-spacing: .04em; }

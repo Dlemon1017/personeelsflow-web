@@ -25,6 +25,8 @@
   var bewaardTot = 0;                             // aantal afgeronde stappen op de server
   var bewaarKetting = Promise.resolve();
   var keuzes = { alleenstaande_ouderenkorting: 'nee' };
+  // Correctie met "Bank en ID" open: gemaskeerde BSN/IBAN van de server ({bsn, iban}); anders null.
+  var bekend = null;
   var bezig = false;
   var startdatum = null; // Date, uit intake_start
   var openStappen = null; // bij terugsturen: alleen deze stappen zijn open (anders null = alles)
@@ -153,8 +155,38 @@
     Object.keys(keuzes).forEach(function (k) { g[k] = keuzes[k]; });
     g.akkoord = $('akkoord').checked;
     g.leeftijd_bevestigd = $('leeftijd_bevestigd').checked;
+    delete g.bsn_keuze;
+    delete g.iban_keuze;
+    // "Dit klopt": niets meesturen, de server houdt de bekende waarde.
+    if (bekend) ['bsn', 'iban'].forEach(function (v) { if (keuzes[v + '_keuze'] !== 'wijzigen') delete g[v]; });
     return g;
   }
+
+  /** Toont bij een correctie de gemaskeerde BSN/IBAN; het invoerveld alleen bij "Wijzigen". */
+  function pasBekendAan() {
+    ['bsn', 'iban'].forEach(function (v) {
+      var blok = document.querySelector('[data-bekend="' + v + '"]');
+      var hint = $(v).parentNode.querySelector('.hint');
+      blok.hidden = !bekend;
+      var wijzigen = !bekend || keuzes[v + '_keuze'] === 'wijzigen';
+      $(v).hidden = !wijzigen;
+      if (hint) hint.hidden = !wijzigen;
+      if (!bekend) return;
+      blok.querySelector('[data-masker]').textContent = bekend[v] || '–';
+      if (!wijzigen) $(v).value = '';
+    });
+  }
+  document.addEventListener('click', function (e) {
+    var groep = e.target.closest('[data-naam="bsn_keuze"], [data-naam="iban_keuze"]');
+    if (!groep || !e.target.closest('button')) return;
+    var v = groep.dataset.naam.replace('_keuze', '');
+    setTimeout(function () { // na de algemene keuzeknop-afhandeling (die zet keuzes[…])
+      pasBekendAan();
+      var fout = document.querySelector('[data-fout="' + v + '"]');
+      if (fout) fout.textContent = '';
+      if (keuzes[groep.dataset.naam] === 'wijzigen') $(v).focus();
+    }, 0);
+  });
 
   function toonFouten(fouten, alleenStap) {
     Array.prototype.forEach.call(document.querySelectorAll('[data-fout]'), function (el) {
@@ -180,6 +212,13 @@
       if (!fotos.achter && !opServer.achter && achterkantNodig(keuzes.id_soort)) f.foto_achter = 'Voeg een foto toe.';
     }
     if (n === 3 && !handtekening.getekend()) f.handtekening = 'Zet je handtekening.';
+    if (n === 2 && bekend) {
+      ['bsn', 'iban'].forEach(function (v) {
+        var k = keuzes[v + '_keuze'];
+        if (!k) f[v] = 'Kies "Dit klopt" of "Wijzigen".';
+        else if (k === 'klopt') delete f[v];
+      });
+    }
     return f;
   }
 
@@ -575,8 +614,11 @@
   function vulOverzicht() {
     var g = gegevens();
     var schoon = valideerIntake(g, null, new Date()).schoon;
-    $('controleBsn').textContent = isOpen(2) ? String(g.bsn || '').replace(/\D/g, '') : 'ongewijzigd';
-    $('controleIban').textContent = isOpen(2) ? normaliseerIban(g.iban).replace(/(.{4})/g, '$1 ').trim() : 'ongewijzigd';
+    var blijft = function (v) { return !isOpen(2) || (bekend && keuzes[v + '_keuze'] !== 'wijzigen'); };
+    $('controleBsn').textContent = blijft('bsn') ? 'ongewijzigd' + (bekend ? ' (' + bekend.bsn + ')' : '') :
+      String(g.bsn || '').replace(/\D/g, '');
+    $('controleIban').textContent = blijft('iban') ? 'ongewijzigd' + (bekend ? ' (' + bekend.iban + ')' : '') :
+      normaliseerIban(g.iban).replace(/(.{4})/g, '$1 ').trim();
     var html = '';
     INTAKE_STAPPEN.forEach(function (velden, n) {
       var rijen = velden.filter(function (v) { return OVERZICHT_OVERSLAAN.indexOf(v) === -1; }).map(function (v) {
@@ -1004,6 +1046,8 @@
         if (openStappen.indexOf(LAATSTE_INVULSTAP) === -1) openStappen.push(LAATSTE_INVULSTAP);
         openStappen.sort(function (a, b) { return a - b; });
         if (r.concept) r.concept.stap = openStappen[0];
+        bekend = r.correctie.bekend || null;
+        pasBekendAan();
         $('welkomTerug').textContent = 'Pas je gegevens aan: ' + r.correctie.reden + '. Je eerder ingevulde gegevens staan er al. ' +
           'Aan het eind zet je opnieuw je handtekening.';
       }
