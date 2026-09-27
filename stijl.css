@@ -204,3 +204,5 @@ body.lezer-open { overflow: hidden; }
 .w-onderwerp { border: 1px solid var(--lijn); border-radius: 12px; padding: 4px 14px 12px; margin-top: 12px; background: var(--kaart); }
 .w-onderwerp > .vinkje { margin-top: 10px; }
 .w-velden { margin-top: 4px; }
+
+.stap-fout { margin: 16px 0 0; }

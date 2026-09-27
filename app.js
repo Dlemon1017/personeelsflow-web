@@ -97,6 +97,7 @@
     getekend: ['✍️', 'Getekend!', 'Je contract is ondertekend. Je krijgt het getekende contract per mail. Tot snel!'],
     later: ['💾', 'Bewaard', 'Je gegevens zijn bewaard. Open de link uit je mail als je je BSN en bankpas bij de hand hebt.'],
     klaar: ['🎉', 'Bedankt!', 'Je gegevens zijn goed ontvangen. Je krijgt binnenkort een mail om je contract te tekenen.'],
+    nakijken: ['🎉', 'Bedankt!', 'Je gegevens zijn goed ontvangen. We kijken je gegevens na en sturen je daarna je contract.'],
     fout: ['😕', 'Er ging iets mis', 'Probeer het over een paar minuten opnieuw. Lukt het niet? Stuur een WhatsApp-bericht.']
   };
 
@@ -110,13 +111,16 @@
     $('laden').hidden = true;
     $('melding').hidden = false;
     $('meldingIcoon').textContent = m[0];
-    $('meldingTitel').textContent = soort === 'klaar' && voornaam ? 'Bedankt, ' + voornaam + '!' : m[1];
+    $('meldingTitel').textContent = (soort === 'klaar' || soort === 'nakijken') && voornaam ? 'Bedankt, ' + voornaam + '!' : m[1];
     $('meldingTekst').textContent = tekst || m[2];
     window.scrollTo(0, 0);
   }
 
   function toonStap(n) {
+    n = Number(n);
+    if (!(n >= 0 && n <= CONTROLESTAP && n % 1 === 0)) n = openStappen ? openStappen[0] : 0; // nooit een "tussenstap"
     stap = n;
+    $('stapFout').hidden = true;
     $('scherm-melding').hidden = true;
     $('formulier').hidden = false;
     $('voortgang').hidden = false;
@@ -177,6 +181,17 @@
     }
     if (n === 3 && !handtekening.getekend()) f.handtekening = 'Zet je handtekening.';
     return f;
+  }
+
+  /** Fout bij een veld dat niet op dit scherm staat? Dan een melding boven de knoppen, zodat Volgende nooit stil blokkeert. */
+  function meldOnzichtbareFouten(fouten) {
+    var onzichtbaar = Object.keys(fouten).filter(function (veld) {
+      var el = document.querySelector('[data-fout="' + veld + '"]');
+      return !el || !el.offsetParent;
+    });
+    $('stapFout').hidden = !onzichtbaar.length;
+    $('stapFout').textContent = onzichtbaar.length ? 'Nog niet compleet: ' + onzichtbaar.map(function (v) { return fouten[v]; })
+      .filter(function (t, i, a) { return a.indexOf(t) === i; }).join(' ') + ' Lukt het niet? Stuur een WhatsApp-bericht.' : '';
   }
 
   function focusEersteFout(fouten) {
@@ -567,7 +582,7 @@
     if (stap <= LAATSTE_INVULSTAP) {
       var fouten = foutenVanStap(stap);
       toonFouten(fouten, stap);
-      if (Object.keys(fouten).length) { focusEersteFout(fouten); return; }
+      if (Object.keys(fouten).length) { focusEersteFout(fouten); meldOnzichtbareFouten(fouten); return; }
     }
     if (stap < CONTROLESTAP) {
       if (stap <= LAATSTE_INVULSTAP && !openStappen) bewaar(stap);
@@ -600,10 +615,12 @@
     bewaarKetting.then(function () { return api(verzoek); }).then(function (r) {
       bezig = false;
       if (r.status === 'fouten') {
-        var eerste = Math.min.apply(null, Object.keys(r.fouten).map(stapVan).filter(function (s) { return s >= 0; }));
-        toonStap(isFinite(eerste) ? eerste : 0);
+        // Alleen naar een stap die open is (bij terugsturen); fouten elders komen in de melding boven de knoppen.
+        var eerste = Math.min.apply(null, Object.keys(r.fouten).map(stapVan).filter(function (s) { return s >= 0 && isOpen(s); }));
+        toonStap(isFinite(eerste) ? eerste : LAATSTE_INVULSTAP);
         toonFouten(r.fouten, null);
         focusEersteFout(r.fouten);
+        meldOnzichtbareFouten(r.fouten);
         return;
       }
       gewijzigd = false;
@@ -614,7 +631,7 @@
         startContract();
         return;
       }
-      toonMelding(r.status === 'klaar' ? 'klaar' : r.status, r.voornaam);
+      toonMelding(r.status === 'klaar' ? (r.nakijken ? 'nakijken' : 'klaar') : r.status, r.voornaam);
     }).catch(function () {
       bezig = false;
       toonStap(LAATSTE_INVULSTAP);
@@ -934,7 +951,12 @@
       startdatum = leesDatumInvoer(r.startdatum);
       $('tekenDatum').textContent = 'Datum: ' + formatDatumNl(new Date());
       if (r.correctie) {
-        openStappen = r.correctie.stappen;
+        openStappen = (r.correctie.stappen || []).map(Number).filter(function (n, i, a) {
+          return n >= 0 && n <= LAATSTE_INVULSTAP && n % 1 === 0 && a.indexOf(n) === i;
+        });
+        if (openStappen.indexOf(LAATSTE_INVULSTAP) === -1) openStappen.push(LAATSTE_INVULSTAP);
+        openStappen.sort(function (a, b) { return a - b; });
+        if (r.concept) r.concept.stap = openStappen[0];
         $('welkomTerug').textContent = 'Pas je gegevens aan: ' + r.correctie.reden + '. Je eerder ingevulde gegevens staan er al. ' +
           'Aan het eind zet je opnieuw je handtekening.';
       }
