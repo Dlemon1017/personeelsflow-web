@@ -12,12 +12,14 @@
   var CONTROLESTAP = 4;
   var API_TIMEOUT_MS = 90000;
   var MAX_FOTO_PX = 1600;
+  var KLEIN_FOTO_PX = 480;
 
   var $ = function (id) { return document.getElementById(id); };
   var token = (/[#&]t=([A-Za-z0-9]{32,})/.exec(location.hash) || [])[1] || '';
   var contractToken = (/[#&]c=([A-Za-z0-9]{32,})/.exec(location.hash) || [])[1] || '';
   var stap = 0;
   var fotos = { voor: '', achter: '' };          // nieuw gekozen foto's (data-URL)
+  var fotosKlein = { voor: '', achter: '' };     // voorbeeldversie (max 480 px) voor de beheerpagina
   var opServer = { voor: false, achter: false }; // al tussentijds opgeslagen
   var bewaardTot = 0;                             // aantal afgeronde stappen op de server
   var bewaarKetting = Promise.resolve();
@@ -241,13 +243,17 @@
       var url = URL.createObjectURL(bestand);
       var img = new Image();
       img.onload = function () {
-        var schaal = Math.min(1, MAX_FOTO_PX / Math.max(img.naturalWidth, img.naturalHeight));
-        var c = document.createElement('canvas');
-        c.width = Math.round(img.naturalWidth * schaal);
-        c.height = Math.round(img.naturalHeight * schaal);
-        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        function versie(maxPx, kwaliteit) {
+          var schaal = Math.min(1, maxPx / Math.max(img.naturalWidth, img.naturalHeight));
+          var c = document.createElement('canvas');
+          c.width = Math.round(img.naturalWidth * schaal);
+          c.height = Math.round(img.naturalHeight * schaal);
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          return c.toDataURL('image/jpeg', kwaliteit);
+        }
+        var uit = { groot: versie(MAX_FOTO_PX, 0.85), klein: versie(KLEIN_FOTO_PX, 0.7) };
         URL.revokeObjectURL(url);
-        ok(c.toDataURL('image/jpeg', 0.85));
+        ok(uit);
       };
       img.onerror = function () { URL.revokeObjectURL(url); fout(new Error('onleesbaar')); };
       img.src = url;
@@ -263,8 +269,10 @@
         if (!bestand) return;
         var foutEl = vak.querySelector('.fout');
         foutEl.textContent = '';
-        verklein(bestand).then(function (dataUrl) {
+        verklein(bestand).then(function (v) {
+          var dataUrl = v.groot;
           fotos[kant] = dataUrl;
+          fotosKlein[kant] = v.klein;
           opServer[kant] = false;
           gewijzigd = true;
           var img = vak.querySelector('img');
@@ -391,14 +399,17 @@
     delete verzoek.gegevens.iban;
     if (n === 2) {
       ['voor', 'achter'].forEach(function (k) {
-        if (fotos[k] && !opServer[k] && (k === 'voor' || achterkantNodig(keuzes.id_soort))) verzoek.fotos[k] = fotos[k];
+        if (fotos[k] && !opServer[k] && (k === 'voor' || achterkantNodig(keuzes.id_soort))) {
+          verzoek.fotos[k] = fotos[k];
+          verzoek.fotos[k + 'Klein'] = fotosKlein[k];
+        }
       });
     }
     bewaarKetting = bewaarKetting.then(function () {
       return api(verzoek).then(function (r) {
         if (r.status !== 'bewaard') return;
         bewaardTot = Math.max(bewaardTot, r.stap);
-        (r.fotos || []).forEach(function (k) { opServer[k] = true; fotos[k] = ''; });
+        (r.fotos || []).forEach(function (k) { opServer[k] = true; fotos[k] = ''; fotosKlein[k] = ''; });
       });
     }).catch(function () { /* stil: bij versturen gaat alles alsnog mee */ });
     return bewaarKetting;
@@ -555,7 +566,12 @@
     var verzoek = {
       actie: 'intake_verstuur',
       gegevens: gegevens(),
-      fotos: { voor: opServer.voor ? '' : fotos.voor, achter: achterkantNodig(keuzes.id_soort) && !opServer.achter ? fotos.achter : '' },
+      fotos: {
+        voor: opServer.voor ? '' : fotos.voor,
+        voorKlein: opServer.voor ? '' : fotosKlein.voor,
+        achter: achterkantNodig(keuzes.id_soort) && !opServer.achter ? fotos.achter : '',
+        achterKlein: achterkantNodig(keuzes.id_soort) && !opServer.achter ? fotosKlein.achter : ''
+      },
       handtekening: handtekening.dataUrl()
     };
     toonLaden('Je gegevens worden verstuurd. Dit kan een halve minuut duren…');
