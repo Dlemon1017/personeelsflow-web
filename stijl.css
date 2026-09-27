@@ -165,3 +165,13 @@ input[aria-invalid="true"] { border-color: var(--fout); }
 .welkom-terug { background: var(--accent-zacht); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; font-size: 15px; }
 .later { text-align: center; margin-top: 18px; }
 .foto-vak .opgeslagen { color: var(--goed); font-weight: 600; }
+
+.samenvatting { margin: 0 0 16px; background: var(--kaart); border: 1px solid var(--lijn); border-radius: 12px; padding: 4px 14px; }
+.samenvatting div { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-top: 1px solid var(--lijn); }
+.samenvatting div:first-child { border-top: 0; }
+.samenvatting dt { color: var(--zacht); }
+.samenvatting dd { margin: 0; text-align: right; font-weight: 600; }
+.pdf-vak iframe { width: 100%; height: 70vh; border: 1px solid var(--lijn); border-radius: 12px; background: #fff; margin-bottom: 10px; }
+.pdf-knoppen { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.pdf-knoppen .knop { text-decoration: none; }
+#scherm-contract .navigatie .knop { flex: 1; }

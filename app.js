@@ -15,6 +15,7 @@
 
   var $ = function (id) { return document.getElementById(id); };
   var token = (/[#&]t=([A-Za-z0-9]{32,})/.exec(location.hash) || [])[1] || '';
+  var contractToken = (/[#&]c=([A-Za-z0-9]{32,})/.exec(location.hash) || [])[1] || '';
   var stap = 0;
   var fotos = { voor: '', achter: '' };          // nieuw gekozen foto's (data-URL)
   var opServer = { voor: false, achter: false }; // al tussentijds opgeslagen
@@ -57,7 +58,7 @@
    * De server is idempotent: is de eerste poging toch opgeslagen, dan geeft de tweede "ingevuld" en is het klaar.
    */
   function api(verzoek) {
-    verzoek.token = token;
+    if (!verzoek.token) verzoek.token = token;
     return apiEenmaal(verzoek).catch(function () {
       return new Promise(function (ok) { setTimeout(ok, 3000); }).then(function () {
         return apiEenmaal(verzoek).then(function (r) {
@@ -70,6 +71,7 @@
 
   // ---------- Schermen ----------
   function toonLaden(tekst) {
+    $('scherm-contract').hidden = true;
     $('formulier').hidden = true;
     $('voortgang').hidden = true;
     $('scherm-melding').hidden = false;
@@ -82,6 +84,7 @@
     ongeldig: ['🔒', 'Link werkt niet', 'Deze link is niet (meer) geldig. Stuur een WhatsApp-bericht als je hulp nodig hebt.'],
     verlopen: ['⏰', 'Link verlopen', 'Deze link is verlopen. Stuur een WhatsApp-bericht, dan krijg je een nieuwe.'],
     ingevuld: ['✅', 'Al ingevuld', 'Je gegevens zijn al binnen. Bedankt!'],
+    getekend: ['✍️', 'Getekend!', 'Je contract is ondertekend. Je krijgt het getekende contract per mail. Tot snel!'],
     later: ['💾', 'Bewaard', 'Je gegevens zijn bewaard. Open de link uit je mail als je je BSN en bankpas bij de hand hebt.'],
     klaar: ['🎉', 'Bedankt!', 'Je gegevens zijn goed ontvangen. Je krijgt binnenkort een mail om je contract te tekenen.'],
     fout: ['😕', 'Er ging iets mis', 'Probeer het over een paar minuten opnieuw. Lukt het niet? Stuur een WhatsApp-bericht.']
@@ -89,6 +92,7 @@
 
   function toonMelding(soort, voornaam, tekst) {
     var m = MELDINGEN[soort] || MELDINGEN.fout;
+    $('scherm-contract').hidden = true;
     $('formulier').hidden = true;
     $('voortgang').hidden = true;
     $('scherm-melding').hidden = false;
@@ -272,8 +276,9 @@
   });
 
   // ---------- Handtekening ----------
-  var handtekening = (function () {
-    var canvas = $('handtekening');
+  /** Tekenvak met de vinger. Gebruikt voor de loonheffing (stap 4) en voor het contract. */
+  function maakHandtekening(canvasId, wisId, zichtbaar) {
+    var canvas = $(canvasId);
     var ctx = canvas.getContext('2d');
     var lengte = 0; // getekende lengte in px; een stip of vegje telt niet als handtekening
     var vorige = null;
@@ -319,12 +324,12 @@
     ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (t) {
       canvas.addEventListener(t, function () { vorige = null; });
     });
-    $('wisHandtekening').addEventListener('click', function () {
+    $(wisId).addEventListener('click', function () {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       lengte = 0;
     });
     window.addEventListener('resize', function () {
-      if (!$('formulier').hidden && stap === 3) pasAan();
+      if (zichtbaar()) pasAan();
     });
     return {
       pasAan: pasAan,
@@ -355,7 +360,14 @@
         return uit.toDataURL('image/png');
       }
     };
-  })();
+  }
+
+  var handtekening = maakHandtekening('handtekening', 'wisHandtekening', function () {
+    return !$('formulier').hidden && stap === LAATSTE_INVULSTAP;
+  });
+  var contractHandtekening = maakHandtekening('contractHandtekening', 'wisContractHandtekening', function () {
+    return !$('scherm-contract').hidden;
+  });
 
   // ---------- Tussentijds opslaan ----------
   var NIET_TUSSENTIJDS = ['bsn', 'iban', 'handtekening', 'akkoord'];
@@ -546,6 +558,13 @@
         return;
       }
       gewijzigd = false;
+      if (r.status === 'klaar' && r.contract) {
+        // Contract staat klaar: direct door naar de ondertekenpagina (de link staat ook in de mail).
+        contractToken = r.contract;
+        history.replaceState(null, '', '#c=' + r.contract);
+        startContract();
+        return;
+      }
       toonMelding(r.status === 'klaar' ? 'klaar' : r.status, r.voornaam);
     }).catch(function () {
       bezig = false;
@@ -558,8 +577,88 @@
     if (gewijzigd && !bezig) { e.preventDefault(); e.returnValue = ''; }
   });
 
+  // ---------- Ondertekenen ----------
+  var CONTRACT_MELDINGEN = {
+    ongeldig: 'ongeldig',
+    verlopen: 'verlopen',
+    getekend: 'getekend'
+  };
+
+  function startContract() {
+    toonLaden('Je contract wordt geladen…');
+    api({ actie: 'contract_start', token: contractToken }).then(function (r) {
+      if (r.status !== 'open') { toonMelding(CONTRACT_MELDINGEN[r.status] || 'fout', r.voornaam); return; }
+      Array.prototype.forEach.call(document.querySelectorAll('.voornaam'), function (el) { el.textContent = r.voornaam; });
+      var s = r.samenvatting;
+      var rijen = [['Naam', s.naam], ['Functie', s.functie], ['Start', s.startdatum], ['Tot en met', s.einddatum],
+        ['Proeftijd tot en met', s.proeftijd], ['Bruto all-in uurloon', '€ ' + s.uurloon]];
+      $('contractSamenvatting').innerHTML = '';
+      rijen.forEach(function (rij) {
+        var div = document.createElement('div');
+        var dt = document.createElement('dt');
+        var dd = document.createElement('dd');
+        dt.textContent = rij[0];
+        dd.textContent = rij[1];
+        div.appendChild(dt);
+        div.appendChild(dd);
+        $('contractSamenvatting').appendChild(div);
+      });
+      var bytes = Uint8Array.from(atob(r.pdf), function (c) { return c.charCodeAt(0); });
+      var url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+      $('pdfOpen').href = url;
+      $('pdfDownload').href = url;
+      $('pdfDownload').download = r.pdfNaam;
+      // Op een groot scherm lees je het contract meteen in de pagina; op een telefoon via "Contract lezen".
+      if (window.matchMedia('(min-width: 760px)').matches) {
+        $('contractPdf').src = url;
+        $('contractPdf').hidden = false;
+      }
+      $('contractDatum').textContent = 'Datum: ' + formatDatumNl(new Date());
+      $('scherm-melding').hidden = true;
+      $('voortgang').hidden = true;
+      $('scherm-contract').hidden = false;
+      contractHandtekening.pasAan();
+      window.scrollTo(0, 0);
+    }).catch(function () { toonMelding('fout'); });
+  }
+
+  $('tekenKnop').addEventListener('click', function () {
+    if (bezig) return;
+    var fouten = {};
+    if (!$('contractAkkoord').checked) fouten.contractAkkoord = 'Vink aan dat je het contract hebt gelezen en akkoord gaat.';
+    if (!contractHandtekening.getekend()) fouten.contractHandtekening = 'Zet je handtekening.';
+    ['contractAkkoord', 'contractHandtekening'].forEach(function (k) {
+      document.querySelector('[data-fout="' + k + '"]').textContent = fouten[k] || '';
+    });
+    if (Object.keys(fouten).length) {
+      document.querySelector('[data-fout="' + Object.keys(fouten)[0] + '"]').scrollIntoView({ block: 'center' });
+      return;
+    }
+    bezig = true;
+    var verzoek = { actie: 'contract_teken', token: contractToken, akkoord: true,
+      handtekening: contractHandtekening.dataUrl(), userAgent: navigator.userAgent };
+    toonLaden('Je contract wordt ondertekend. Dit kan een halve minuut duren…');
+    api(verzoek).then(function (r) {
+      bezig = false;
+      if (r.status === 'fouten') {
+        $('scherm-melding').hidden = true;
+        $('scherm-contract').hidden = false;
+        Object.keys(r.fouten).forEach(function (k) {
+          var el = document.querySelector('[data-fout="' + k + '"]');
+          if (el) el.textContent = r.fouten[k];
+        });
+        return;
+      }
+      toonMelding(CONTRACT_MELDINGEN[r.status] || 'fout', r.voornaam);
+    }).catch(function () {
+      bezig = false;
+      toonMelding('fout');
+    });
+  });
+
   // ---------- Start ----------
   function start() {
+    if (contractToken) { startContract(); return; }
     if (!token) { toonMelding('ongeldig'); return; }
     toonLaden('Even laden…');
     api({ actie: 'intake_start' }).then(function (r) {

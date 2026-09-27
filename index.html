@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src https://script.google.com https://script.googleusercontent.com; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src https://script.google.com https://script.googleusercontent.com; frame-src blob:; base-uri 'none'; form-action 'none'">
 <title>Aanmelden – Pasta And More</title>
 <link rel="stylesheet" href="stijl.css">
 </head>
@@ -27,6 +27,30 @@
       <h1 id="meldingTitel"></h1>
       <p id="meldingTekst"></p>
     </div>
+  </section>
+
+  <!-- Ondertekenpagina (link #c=token) -->
+  <section id="scherm-contract" class="scherm" hidden>
+    <h1>Je contract, <span class="voornaam"></span></h1>
+    <p class="intro">Lees je contract goed door. Klopt alles? Vink dan aan dat je akkoord gaat en zet je handtekening.</p>
+    <dl class="samenvatting" id="contractSamenvatting"></dl>
+    <div class="pdf-vak">
+      <iframe id="contractPdf" title="Je contract (PDF)" hidden></iframe>
+      <div class="pdf-knoppen">
+        <a class="knop licht" id="pdfOpen" target="_blank" rel="noopener">Contract lezen (PDF)</a>
+        <a class="knop licht" id="pdfDownload">Downloaden</a>
+      </div>
+    </div>
+    <label class="vinkje"><input type="checkbox" id="contractAkkoord"> <span>Ik heb het contract gelezen en ga akkoord</span></label>
+    <div class="fout" data-fout="contractAkkoord"></div>
+    <div class="veld">
+      <label>Handtekening</label>
+      <div class="hint">Teken met je vinger in het vak.</div>
+      <div class="teken-vak"><canvas id="contractHandtekening" aria-label="Vak voor je handtekening onder het contract"></canvas></div>
+      <div class="teken-onder"><span class="hint" id="contractDatum"></span><button type="button" class="tekst-knop" id="wisContractHandtekening">Opnieuw</button></div>
+      <div class="fout" data-fout="contractHandtekening"></div>
+    </div>
+    <div class="navigatie"><button type="button" class="knop" id="tekenKnop">Contract ondertekenen</button></div>
   </section>
 
   <form id="formulier" novalidate hidden>
