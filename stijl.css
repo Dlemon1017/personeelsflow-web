@@ -1,32 +1,18 @@
 :root {
-  --bg: #faf7f4;
-  --kaart: #ffffff;
-  --tekst: #1f2328;
-  --zacht: #636a73;
-  --lijn: #e4dfd9;
-  --accent: #d9480f;
-  --accent-zacht: #fdebe1;
-  --knop: #1f2328;
-  --knop-tekst: #ffffff;
-  --focus: #2f6feb;
-  --fout: #c4302b;
-  --goed: #1e7a3c;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #14120f;
-    --kaart: #1d1a17;
-    --tekst: #efeae4;
-    --zacht: #a59d94;
-    --lijn: #35302a;
-    --accent: #ff8a4c;
-    --accent-zacht: #3a2417;
-    --knop: #efeae4;
-    --knop-tekst: #14120f;
-    --focus: #6ea0ff;
-    --fout: #ff7b72;
-    --goed: #7fd49a;
-  }
+  /* Altijd donker, ongeacht de instelling van het apparaat (huisstijl: zwart logo). */
+  color-scheme: dark;
+  --bg: #0d0d0d;
+  --kaart: #1a1a1a;
+  --tekst: #f2f2f2;
+  --zacht: #a8a8a8;
+  --lijn: #333333;
+  --accent: #f05252;
+  --accent-zacht: #3a1a1a;
+  --knop: #f2f2f2;
+  --knop-tekst: #0d0d0d;
+  --focus: #7aa7ff;
+  --fout: #ff7b72;
+  --goed: #7fd49a;
 }
 
 * { box-sizing: border-box; }
@@ -43,11 +29,13 @@ body {
 .kop {
   position: sticky; top: 0; z-index: 5;
   background: var(--bg);
-  padding: calc(14px + env(safe-area-inset-top)) 16px 12px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--lijn);
 }
-.merk { max-width: 520px; margin: 0 auto; font-weight: 700; letter-spacing: -0.01em; }
-.voortgang { max-width: 520px; margin: 10px auto 0; }
+.logo { display: flex; justify-content: center; padding: calc(20px + env(safe-area-inset-top)) 16px 4px; }
+.logo img { width: 120px; height: 120px; border-radius: 50%; display: block; }
+.kop:has(#voortgang[hidden]) { display: none; }
+.voortgang { max-width: 520px; margin: 0 auto; }
 .voortgang-tekst { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--zacht); margin-bottom: 6px; }
 .balk { height: 6px; background: var(--lijn); border-radius: 99px; overflow: hidden; }
 .balk-vulling { height: 100%; width: 25%; background: var(--accent); border-radius: 99px; transition: width .25s ease; }

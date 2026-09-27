@@ -188,6 +188,10 @@
   document.addEventListener('input', function (e) {
     gewijzigd = true;
     var v = e.target.id;
+    // Melding bij dit veld weg zodra het wordt aangepast; bij Volgende wordt opnieuw gecontroleerd.
+    var foutEl = document.querySelector('[data-fout="' + v + '"]');
+    if (foutEl) foutEl.textContent = '';
+    if (e.target.getAttribute('aria-invalid') === 'true') e.target.setAttribute('aria-invalid', 'false');
     if (v === 'geboortedatum') formatteerDatum(e);
     if (v === 'geboortedatum') { werkNoodHintBij(); werkLeeftijdBij(); }
     if (v === 'iban') {
@@ -277,7 +281,7 @@
 
   // ---------- Handtekening ----------
   /** Tekenvak met de vinger. Gebruikt voor de loonheffing (stap 4) en voor het contract. */
-  function maakHandtekening(canvasId, wisId, zichtbaar) {
+  function maakHandtekening(canvasId, wisId, zichtbaar, foutNaam) {
     var canvas = $(canvasId);
     var ctx = canvas.getContext('2d');
     var lengte = 0; // getekende lengte in px; een stip of vegje telt niet als handtekening
@@ -303,6 +307,8 @@
     }
     canvas.addEventListener('pointerdown', function (e) {
       e.preventDefault();
+      var foutEl = document.querySelector('[data-fout="' + foutNaam + '"]');
+      if (foutEl) foutEl.textContent = '';
       canvas.setPointerCapture(e.pointerId);
       vorige = punt(e);
       ctx.beginPath();
@@ -364,10 +370,10 @@
 
   var handtekening = maakHandtekening('handtekening', 'wisHandtekening', function () {
     return !$('formulier').hidden && stap === LAATSTE_INVULSTAP;
-  });
+  }, 'handtekening');
   var contractHandtekening = maakHandtekening('contractHandtekening', 'wisContractHandtekening', function () {
     return !$('scherm-contract').hidden;
-  });
+  }, 'contractHandtekening');
 
   // ---------- Tussentijds opslaan ----------
   var NIET_TUSSENTIJDS = ['bsn', 'iban', 'handtekening', 'akkoord'];
