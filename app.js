@@ -401,6 +401,53 @@
     };
   }
 
+  /**
+   * Straat en woonplaats automatisch invullen na postcode + huisnummer (+ toevoeging), via de PDOK Locatieserver
+   * (Kadaster, BAG). Alleen postcode en huisnummer gaan naar PDOK. Niet gevonden: melding, niet blokkeren.
+   * PDOK niet bereikbaar: niets doen, gewoon zelf invullen.
+   */
+  function koppelAdresZoeker(v, meldingId) {
+    var timer = null;
+    var laatste = '';
+    function zoek() {
+      var melding = $(meldingId);
+      var url = pdokUrl($(v.postcode).value, $(v.huisnummer).value);
+      if (!url) { melding.hidden = true; laatste = ''; return; }
+      var sleutel = url + '|' + $(v.toevoeging).value;
+      if (sleutel === laatste) return;
+      laatste = sleutel;
+      var afbreken = typeof AbortController === 'function' ? new AbortController() : null;
+      var t = afbreken ? setTimeout(function () { afbreken.abort(); }, 5000) : null;
+      fetch(url, { credentials: 'omit', referrerPolicy: 'no-referrer', signal: afbreken ? afbreken.signal : undefined })
+        .then(function (r) { if (!r.ok) throw new Error('PDOK'); return r.json(); })
+        .then(function (j) {
+          clearTimeout(t);
+          if (sleutel !== laatste) return; // intussen verder getypt
+          var o = bagOordeel(j.response.docs, { toevoeging: $(v.toevoeging).value });
+          if (o.nummerBestaat) {
+            [[v.straat, o.straat], [v.woonplaats, o.woonplaats]].forEach(function (p) {
+              var el = $(p[0]);
+              if (el.value === p[1]) return;
+              el.value = p[1];
+              el.dispatchEvent(new Event('input', { bubbles: true })); // foutmelding weg, "gewijzigd" bijhouden
+            });
+          }
+          melding.hidden = o.gevonden;
+          melding.textContent = 'Dit adres kunnen we niet vinden. Controleer je ' +
+            ($(v.toevoeging).value.trim() ? 'postcode, huisnummer en toevoeging.' : 'postcode en huisnummer.');
+        })
+        .catch(function () { clearTimeout(t); laatste = ''; $(meldingId).hidden = true; });
+    }
+    [v.postcode, v.huisnummer, v.toevoeging].forEach(function (id) {
+      $(id).addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(zoek, 600); });
+      $(id).addEventListener('change', function () { clearTimeout(timer); zoek(); });
+    });
+  }
+  koppelAdresZoeker({ postcode: 'postcode', huisnummer: 'huisnummer', toevoeging: 'toevoeging', straat: 'straat', woonplaats: 'woonplaats' },
+    'adresMelding');
+  koppelAdresZoeker({ postcode: 'w-postcode', huisnummer: 'w-huisnummer', toevoeging: 'w-toevoeging', straat: 'w-straat',
+    woonplaats: 'w-woonplaats' }, 'wAdresMelding');
+
   var handtekening = maakHandtekening('handtekening', 'wisHandtekening', function () {
     return !$('formulier').hidden && stap === LAATSTE_INVULSTAP;
   }, 'handtekening');

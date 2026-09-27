@@ -206,3 +206,6 @@ body.lezer-open { overflow: hidden; }
 .w-velden { margin-top: 4px; }
 
 .stap-fout { margin: 16px 0 0; }
+
+/* Adres opzoeken (PDOK) */
+.adres-melding { font-size: 14px; color: var(--geel, #e0b04a); margin: -4px 0 12px; }

@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="referrer" content="no-referrer">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src https://script.google.com https://script.googleusercontent.com; frame-src blob:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob:; connect-src https://script.google.com https://script.googleusercontent.com https://api.pdok.nl; frame-src blob:; base-uri 'none'; form-action 'none'">
 <title>Aanmelden – Pasta And More</title>
 <meta name="theme-color" content="#0d0d0d">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="stijl.css?v=1790537087">
+<link rel="stylesheet" href="stijl.css?v=1790537993">
 </head>
 <body>
-<div class="logo"><img src="pam.png?v=1790537087" width="120" height="120" alt="Pasta &amp; More"></div>
+<div class="logo"><img src="pam.png?v=1790537993" width="120" height="120" alt="Pasta &amp; More"></div>
 <header class="kop">
   <div class="voortgang" id="voortgang" hidden>
     <div class="voortgang-tekst"><span id="stapNummer">Stap 1 van 4</span><span id="stapTitel"></span></div>
@@ -102,6 +102,7 @@
             <div class="veld smal"><label for="w-huisnummer">Huisnr.</label><input id="w-huisnummer" inputmode="numeric" maxlength="5"><div class="fout" data-fout="w-huisnummer"></div></div>
             <div class="veld smal"><label for="w-toevoeging">Toev.</label><input id="w-toevoeging" maxlength="6"></div>
           </div>
+          <p class="adres-melding" id="wAdresMelding" role="status" hidden></p>
           <div class="veld"><label for="w-straat">Straat</label><input id="w-straat" autocapitalize="words"><div class="fout" data-fout="w-straat"></div></div>
           <div class="veld"><label for="w-woonplaats">Woonplaats</label><input id="w-woonplaats" autocapitalize="words"><div class="fout" data-fout="w-woonplaats"></div></div>
         </div>
@@ -255,6 +256,7 @@
           <input id="toevoeging" name="toevoeging" autocapitalize="characters" maxlength="6">
         </div>
       </div>
+      <p class="adres-melding" id="adresMelding" role="status" hidden></p>
       <div class="veld">
         <label for="straat">Straat</label>
         <input id="straat" name="straat" autocomplete="address-line1" autocapitalize="words">
@@ -402,8 +404,9 @@
   </form>
 </main>
 
-<script src="config.js?v=1790537087"></script>
-<script src="validatie.js?v=1790537087"></script>
-<script src="app.js?v=1790537087"></script>
+<script src="config.js?v=1790537993"></script>
+<script src="validatie.js?v=1790537993"></script>
+<script src="adres.js?v=1790537993"></script>
+<script src="app.js?v=1790537993"></script>
 </body>
 </html>
