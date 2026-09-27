@@ -17,6 +17,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var token = (/[#&]t=([A-Za-z0-9]{32,})/.exec(location.hash) || [])[1] || '';
   var contractToken = (/[#&]c=([A-Za-z0-9]{32,})/.exec(location.hash) || [])[1] || '';
+  var wijzigToken = (/[#&]w=([A-Za-z0-9]{32,})/.exec(location.hash) || [])[1] || '';
   var stap = 0;
   var fotos = { voor: '', achter: '' };          // nieuw gekozen foto's (data-URL)
   var fotosKlein = { voor: '', achter: '' };     // voorbeeldversie (max 480 px) voor de beheerpagina
@@ -26,6 +27,7 @@
   var keuzes = { alleenstaande_ouderenkorting: 'nee' };
   var bezig = false;
   var startdatum = null; // Date, uit intake_start
+  var openStappen = null; // bij terugsturen: alleen deze stappen zijn open (anders null = alles)
   var gewijzigd = false;
 
   // ---------- API ----------
@@ -73,6 +75,7 @@
 
   // ---------- Schermen ----------
   function toonLaden(tekst) {
+    $('scherm-wijziging').hidden = true;
     $('scherm-contract').hidden = true;
     $('formulier').hidden = true;
     $('voortgang').hidden = true;
@@ -86,6 +89,11 @@
     ongeldig: ['🔒', 'Link werkt niet', 'Deze link is niet (meer) geldig. Stuur een WhatsApp-bericht als je hulp nodig hebt.'],
     verlopen: ['⏰', 'Link verlopen', 'Deze link is verlopen. Stuur een WhatsApp-bericht, dan krijg je een nieuwe.'],
     ingevuld: ['✅', 'Al ingevuld', 'Je gegevens zijn al binnen. Bedankt!'],
+    gewijzigd: ['✅', 'Bedankt!', 'Je wijziging is doorgegeven. We verwerken hem zo snel mogelijk.'],
+    geen: ['👍', 'Niets veranderd', 'Je gegevens waren al zo. Er is niets gewijzigd.'],
+    aangepast: ['🔄', 'Contract wordt aangepast', 'Je contract wordt aangepast. Je krijgt een nieuwe mail zodra het klaarstaat.'],
+    te_vaak: ['⏳', 'Even wachten', 'Je hebt te vaak een code aangevraagd. Probeer het over een uur opnieuw.'],
+    sessie_verlopen: ['⏰', 'Verlopen', 'Je sessie is verlopen. Open de link opnieuw en vraag een nieuwe code aan.'],
     getekend: ['✍️', 'Getekend!', 'Je contract is ondertekend. Je krijgt het getekende contract per mail. Tot snel!'],
     later: ['💾', 'Bewaard', 'Je gegevens zijn bewaard. Open de link uit je mail als je je BSN en bankpas bij de hand hebt.'],
     klaar: ['🎉', 'Bedankt!', 'Je gegevens zijn goed ontvangen. Je krijgt binnenkort een mail om je contract te tekenen.'],
@@ -94,6 +102,7 @@
 
   function toonMelding(soort, voornaam, tekst) {
     var m = MELDINGEN[soort] || MELDINGEN.fout;
+    $('scherm-wijziging').hidden = true;
     $('scherm-contract').hidden = true;
     $('formulier').hidden = true;
     $('voortgang').hidden = true;
@@ -118,7 +127,8 @@
     $('stapNummer').textContent = n === CONTROLESTAP ? 'Laatste stap' : 'Stap ' + (n + 1) + ' van 4';
     $('stapTitel').textContent = TITELS[n];
     $('balk').style.width = Math.min(100, (n + 1) * 25) + '%';
-    $('terug').hidden = n === 0;
+    $('terug').hidden = n !== CONTROLESTAP && vorigeStap(n) < 0;
+    $('later').parentNode.hidden = !!openStappen; // bij terugsturen niet tussentijds opslaan
     $('terug').textContent = n === CONTROLESTAP ? 'Terug om aan te passen' : 'Terug';
     $('navigatie').classList.toggle('gestapeld', n === CONTROLESTAP);
     $('volgende').textContent = n === CONTROLESTAP ? 'Versturen' : 'Volgende';
@@ -503,15 +513,15 @@
   function vulOverzicht() {
     var g = gegevens();
     var schoon = valideerIntake(g, null, new Date()).schoon;
-    $('controleBsn').textContent = String(g.bsn || '').replace(/\D/g, '');
-    $('controleIban').textContent = normaliseerIban(g.iban).replace(/(.{4})/g, '$1 ').trim();
+    $('controleBsn').textContent = isOpen(2) ? String(g.bsn || '').replace(/\D/g, '') : 'ongewijzigd';
+    $('controleIban').textContent = isOpen(2) ? normaliseerIban(g.iban).replace(/(.{4})/g, '$1 ').trim() : 'ongewijzigd';
     var html = '';
     INTAKE_STAPPEN.forEach(function (velden, n) {
       var rijen = velden.filter(function (v) { return OVERZICHT_OVERSLAAN.indexOf(v) === -1; }).map(function (v) {
         return '<div><dt></dt><dd></dd></div>';
       });
       html += '<div class="overzicht-groep" data-groep="' + n + '"><div class="overzicht-kop"><h2></h2>' +
-        '<button type="button" class="tekst-knop" data-naar="' + n + '">Aanpassen</button></div><dl>' + rijen.join('') +
+        (isOpen(n) ? '<button type="button" class="tekst-knop" data-naar="' + n + '">Aanpassen</button>' : '') + '</div><dl>' + rijen.join('') +
         (n === LAATSTE_INVULSTAP ? '<div><dt>Handtekening</dt><dd><img alt="Je handtekening"></dd></div>' : '') + '</dl></div>';
     });
     $('overzicht').innerHTML = html;
@@ -535,9 +545,20 @@
   });
 
   // ---------- Navigatie ----------
+  function isOpen(n) { return !openStappen || openStappen.indexOf(n) !== -1; }
+  function volgendeStap(n) {
+    for (var i = n + 1; i <= LAATSTE_INVULSTAP; i++) if (isOpen(i)) return i;
+    return CONTROLESTAP;
+  }
+  function vorigeStap(n) {
+    for (var i = n - 1; i >= 0; i--) if (isOpen(i)) return i;
+    return -1;
+  }
+
   $('terug').addEventListener('click', function () {
-    if (stap === CONTROLESTAP) toonStap(2); // BSN en IBAN staan in "Bank en ID"
-    else if (stap > 0) toonStap(stap - 1);
+    if (stap === CONTROLESTAP) { toonStap(isOpen(2) ? 2 : openStappen ? openStappen[0] : 2); return; } // BSN/IBAN staan in "Bank en ID"
+    var vorige = vorigeStap(stap);
+    if (vorige >= 0) toonStap(vorige);
   });
 
   $('formulier').addEventListener('submit', function (e) {
@@ -549,8 +570,8 @@
       if (Object.keys(fouten).length) { focusEersteFout(fouten); return; }
     }
     if (stap < CONTROLESTAP) {
-      if (stap <= LAATSTE_INVULSTAP) bewaar(stap);
-      toonStap(stap + 1);
+      if (stap <= LAATSTE_INVULSTAP && !openStappen) bewaar(stap);
+      toonStap(volgendeStap(stap));
       return;
     }
     verstuur();
@@ -559,6 +580,7 @@
   function verstuur() {
     // Laatste controle over alle stappen samen.
     for (var n = 0; n <= LAATSTE_INVULSTAP; n++) {
+      if (!isOpen(n)) continue;
       var f = foutenVanStap(n);
       if (Object.keys(f).length) { toonStap(n); toonFouten(f, n); focusEersteFout(f); return; }
     }
@@ -786,8 +808,121 @@
     });
   });
 
+  // ---------- Wijziging doorgeven (#w=token) ----------
+  var wSessie = '';
+  var wLhk = '';
+  var wHandtekening = maakHandtekening('wHandtekening', 'wWis', function () { return !$('scherm-wijziging').hidden; }, 'wHandtekening');
+  var W_VELDEN = {
+    iban: ['iban'], adres: ['straat', 'huisnummer', 'toevoeging', 'postcode', 'woonplaats'], telefoon: ['mobiel'],
+    noodcontact: ['noodcontact_naam', 'noodcontact_relatie', 'noodcontact_telefoon'], loonheffingskorting: []
+  };
+
+  function toonWijziging(deel) {
+    $('scherm-melding').hidden = true;
+    $('formulier').hidden = true;
+    $('voortgang').hidden = true;
+    $('scherm-wijziging').hidden = false;
+    $('wStapCode').hidden = deel !== 'code';
+    $('wStapKeuze').hidden = deel !== 'keuze';
+  }
+
+  function wFouten(fouten) {
+    Array.prototype.forEach.call(document.querySelectorAll('#scherm-wijziging [data-fout]'), function (el) {
+      var k = el.dataset.fout;
+      el.textContent = fouten[k.replace(/^w-/, '')] || fouten[k] || '';
+    });
+  }
+
+  function startWijziging() {
+    toonLaden('Even laden…');
+    apiSnel({ actie: 'wijziging_start', token: wijzigToken }, 6000, 20000).then(function (r) {
+      if (r.status !== 'open') { toonMelding(r.status); return; }
+      $('wKop').textContent = 'Hoi ' + r.voornaam + ', wat verandert er?';
+      $('wEmail').textContent = r.email;
+      toonWijziging('code');
+    }).catch(function () { toonMelding('fout'); });
+  }
+
+  $('wStuurCode').addEventListener('click', function () {
+    var knop = this;
+    knop.disabled = true;
+    knop.textContent = 'Code wordt verstuurd…';
+    $('wCodeVak').hidden = false;
+    $('wCode').focus();
+    api({ actie: 'wijziging_code', token: wijzigToken }).then(function (r) {
+      knop.disabled = false;
+      knop.textContent = 'Nieuwe code sturen';
+      if (r.status !== 'verstuurd') toonMelding(r.status);
+    }).catch(function () { knop.disabled = false; knop.textContent = 'Stuur code'; toonMelding('fout'); });
+  });
+
+  $('wCode').addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); $('wBevestig').click(); } });
+  $('wCode').addEventListener('input', function () { if ($('wCode').value.replace(/\D/g, '').length === 6) $('wBevestig').click(); });
+  $('wBevestig').addEventListener('click', function () {
+    var knop = this;
+    knop.disabled = true;
+    wFouten({});
+    apiSnel({ actie: 'wijziging_verifieer', token: wijzigToken, code: $('wCode').value }, 6000, 30000).then(function (r) {
+      knop.disabled = false;
+      if (r.status === 'fouten') { wFouten(r.fouten); return; }
+      if (r.status !== 'ok') { toonMelding(r.status); return; }
+      wSessie = r.sessie;
+      var g = r.gegevens;
+      $('wIbanNu').textContent = 'Nu: ' + g.ibanMasker;
+      ['straat', 'huisnummer', 'toevoeging', 'postcode', 'woonplaats', 'mobiel', 'noodcontact_naam', 'noodcontact_relatie',
+        'noodcontact_telefoon'].forEach(function (v) { $('w-' + v).value = g[v] || ''; });
+      $('wDatum').textContent = 'Datum: ' + formatDatumNl(new Date());
+      toonWijziging('keuze');
+    }).catch(function () { knop.disabled = false; toonMelding('fout'); });
+  });
+
+  // Onderwerp aan/uit → velden tonen
+  $('wStapKeuze').addEventListener('change', function (e) {
+    var o = e.target.dataset && e.target.dataset.onderwerp;
+    if (!o) return;
+    document.querySelector('[data-velden="' + o + '"]').hidden = !e.target.checked;
+    if (o === 'loonheffingskorting' && e.target.checked) wHandtekening.pasAan();
+  });
+  document.querySelector('[data-naam="w-lhk"]').addEventListener('click', function (e) {
+    var knop = e.target.closest('button');
+    if (!knop) return;
+    wLhk = knop.dataset.waarde;
+    Array.prototype.forEach.call(this.children, function (b) { b.setAttribute('aria-pressed', String(b === knop)); });
+    $('wLhkDatumLabel').textContent = wLhk === 'ja' ? 'Toepassen vanaf' : 'Niet meer toepassen vanaf';
+  });
+
+  $('wVerstuur').addEventListener('click', function () {
+    if (bezig) return;
+    var onderwerpen = Array.prototype.filter.call(document.querySelectorAll('[data-onderwerp]'), function (c) { return c.checked; })
+      .map(function (c) { return c.dataset.onderwerp; });
+    var fouten = {};
+    if (!onderwerpen.length) fouten.onderwerpen = 'Vink aan wat je wilt wijzigen.';
+    var lhk = onderwerpen.indexOf('loonheffingskorting') !== -1;
+    if (lhk) {
+      if (!wLhk) fouten.loonheffingskorting = 'Kies wel of niet toepassen.';
+      if (!$('w-lhkDatum').value) fouten.lhkDatum = 'Kies een datum.';
+      if (!wHandtekening.getekend()) fouten.wHandtekening = 'Zet je handtekening.';
+      if (!$('wAkkoord').checked) fouten.wAkkoord = 'Vink aan dat je gegevens kloppen.';
+    }
+    wFouten(fouten);
+    if (Object.keys(fouten).length) return;
+    var gegevens = {};
+    onderwerpen.forEach(function (o) { W_VELDEN[o].forEach(function (v) { gegevens[v] = $('w-' + v).value; }); });
+    if (lhk) gegevens.loonheffingskorting = wLhk;
+    bezig = true;
+    toonLaden('Je wijziging wordt verstuurd…');
+    api({ actie: 'wijziging_verstuur', token: wijzigToken, sessie: wSessie, onderwerpen: onderwerpen, gegevens: gegevens,
+      lhkDatum: lhk ? $('w-lhkDatum').value : '', handtekening: lhk ? wHandtekening.dataUrl() : '', akkoord: $('wAkkoord').checked })
+      .then(function (r) {
+        bezig = false;
+        if (r.status === 'fouten') { toonWijziging('keuze'); wFouten(r.fouten); return; }
+        toonMelding(r.status === 'klaar' ? 'gewijzigd' : r.status);
+      }).catch(function () { bezig = false; toonMelding('fout'); });
+  });
+
   // ---------- Start ----------
   function start() {
+    if (wijzigToken) { startWijziging(); return; }
     if (contractToken) { startContract(); return; }
     if (!token) { toonMelding('ongeldig'); return; }
     toonLaden('Even laden…');
@@ -798,8 +933,14 @@
       $('startdatum').textContent = r.startdatum;
       startdatum = leesDatumInvoer(r.startdatum);
       $('tekenDatum').textContent = 'Datum: ' + formatDatumNl(new Date());
+      if (r.correctie) {
+        openStappen = r.correctie.stappen;
+        $('welkomTerug').textContent = 'Pas je gegevens aan: ' + r.correctie.reden + '. Je eerder ingevulde gegevens staan er al. ' +
+          'Aan het eind zet je opnieuw je handtekening.';
+      }
       if (r.concept) vulConcept(r.concept);
       else toonStap(0);
+      if (r.correctie && !isOpen(0)) $('leeftijd_bevestigd').checked = true;
     }).catch(function () { toonMelding('fout'); });
   }
 

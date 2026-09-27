@@ -10,10 +10,10 @@
 <meta name="theme-color" content="#0d0d0d">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="stijl.css?v=1790533490">
+<link rel="stylesheet" href="stijl.css?v=1790534380">
 </head>
 <body>
-<div class="logo"><img src="pam.png?v=1790533490" width="120" height="120" alt="Pasta &amp; More"></div>
+<div class="logo"><img src="pam.png?v=1790534380" width="120" height="120" alt="Pasta &amp; More"></div>
 <header class="kop">
   <div class="voortgang" id="voortgang" hidden>
     <div class="voortgang-tekst"><span id="stapNummer">Stap 1 van 4</span><span id="stapTitel"></span></div>
@@ -63,6 +63,90 @@
         <div class="fout" data-fout="contractHandtekening"></div>
       </div>
       <div class="navigatie"><button type="button" class="knop" id="tekenKnop">Contract ondertekenen</button></div>
+    </div>
+  </section>
+
+  <!-- Wijziging doorgeven (link #w=token) -->
+  <section id="scherm-wijziging" class="scherm" hidden>
+    <h1 id="wKop">Wijziging doorgeven</h1>
+
+    <div id="wStapCode">
+      <p class="intro">Om je gegevens te beschermen sturen we eerst een code van 6 cijfers naar <strong id="wEmail"></strong>.</p>
+      <button type="button" class="knop breed" id="wStuurCode">Stuur code</button>
+      <div id="wCodeVak" hidden>
+        <div class="veld">
+          <label for="wCode">Code</label>
+          <input id="wCode" class="code-invoer" inputmode="numeric" autocomplete="one-time-code" maxlength="6">
+          <div class="fout" data-fout="code"></div>
+        </div>
+        <button type="button" class="knop breed mt" id="wBevestig">Bevestigen</button>
+      </div>
+    </div>
+
+    <div id="wStapKeuze" hidden>
+      <p class="intro">Wat wil je wijzigen? Vink aan wat er verandert.</p>
+      <div class="w-onderwerp">
+        <label class="vinkje"><input type="checkbox" data-onderwerp="iban"> <span>Bankrekening (IBAN)</span></label>
+        <div class="w-velden" data-velden="iban" hidden>
+          <div class="hint" id="wIbanNu"></div>
+          <div class="veld"><label for="w-iban">Nieuw IBAN</label>
+            <input id="w-iban" autocomplete="off" autocapitalize="characters" placeholder="NL00 BANK 0123 4567 89" maxlength="42">
+            <div class="fout" data-fout="w-iban"></div></div>
+        </div>
+      </div>
+      <div class="w-onderwerp">
+        <label class="vinkje"><input type="checkbox" data-onderwerp="adres"> <span>Adres</span></label>
+        <div class="w-velden" data-velden="adres" hidden>
+          <div class="rij">
+            <div class="veld"><label for="w-postcode">Postcode</label><input id="w-postcode" autocapitalize="characters" maxlength="7"><div class="fout" data-fout="w-postcode"></div></div>
+            <div class="veld smal"><label for="w-huisnummer">Huisnr.</label><input id="w-huisnummer" inputmode="numeric" maxlength="5"><div class="fout" data-fout="w-huisnummer"></div></div>
+            <div class="veld smal"><label for="w-toevoeging">Toev.</label><input id="w-toevoeging" maxlength="6"></div>
+          </div>
+          <div class="veld"><label for="w-straat">Straat</label><input id="w-straat" autocapitalize="words"><div class="fout" data-fout="w-straat"></div></div>
+          <div class="veld"><label for="w-woonplaats">Woonplaats</label><input id="w-woonplaats" autocapitalize="words"><div class="fout" data-fout="w-woonplaats"></div></div>
+        </div>
+      </div>
+      <div class="w-onderwerp">
+        <label class="vinkje"><input type="checkbox" data-onderwerp="telefoon"> <span>Telefoonnummer</span></label>
+        <div class="w-velden" data-velden="telefoon" hidden>
+          <div class="veld"><label for="w-mobiel">Mobiel nummer</label><input id="w-mobiel" type="tel" inputmode="tel"><div class="fout" data-fout="w-mobiel"></div></div>
+        </div>
+      </div>
+      <div class="w-onderwerp">
+        <label class="vinkje"><input type="checkbox" data-onderwerp="noodcontact"> <span>Noodcontact</span></label>
+        <div class="w-velden" data-velden="noodcontact" hidden>
+          <div class="veld"><label for="w-noodcontact_naam">Naam</label><input id="w-noodcontact_naam" autocapitalize="words"><div class="fout" data-fout="w-noodcontact_naam"></div></div>
+          <div class="rij">
+            <div class="veld"><label for="w-noodcontact_relatie">Relatie</label><input id="w-noodcontact_relatie"><div class="fout" data-fout="w-noodcontact_relatie"></div></div>
+            <div class="veld"><label for="w-noodcontact_telefoon">Telefoon</label><input id="w-noodcontact_telefoon" type="tel" inputmode="tel"><div class="fout" data-fout="w-noodcontact_telefoon"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="w-onderwerp">
+        <label class="vinkje"><input type="checkbox" data-onderwerp="loonheffingskorting"> <span>Loonheffingskorting</span></label>
+        <div class="w-velden" data-velden="loonheffingskorting" hidden>
+          <div class="uitleg">Loonheffingskorting zorgt dat er minder belasting van je loon af gaat. Je mag het maar bij <strong>één</strong>
+            werkgever tegelijk aanzetten. Heb je er een baan bij met loonheffingskorting? Zet het dan hier uit.</div>
+          <div class="keuze" data-naam="w-lhk">
+            <button type="button" data-waarde="ja">Wel toepassen</button>
+            <button type="button" data-waarde="nee">Niet meer toepassen</button>
+          </div>
+          <div class="fout" data-fout="w-loonheffingskorting"></div>
+          <div class="veld"><label for="w-lhkDatum" id="wLhkDatumLabel">Vanaf welke datum?</label>
+            <input id="w-lhkDatum" type="date"><div class="fout" data-fout="w-lhkDatum"></div></div>
+          <div class="veld">
+            <label>Handtekening</label>
+            <div class="hint">Zet je handtekening in het vak. Dat kan gewoon op je telefoon.</div>
+            <div class="teken-vak"><canvas id="wHandtekening" aria-label="Vak voor je handtekening"></canvas></div>
+            <div class="teken-onder"><span class="hint" id="wDatum"></span><button type="button" class="tekst-knop" id="wWis">Opnieuw</button></div>
+            <div class="fout" data-fout="wHandtekening"></div>
+          </div>
+          <label class="vinkje"><input type="checkbox" id="wAkkoord"> <span>Mijn gegevens kloppen</span></label>
+          <div class="fout" data-fout="wAkkoord"></div>
+        </div>
+      </div>
+      <div class="fout" data-fout="w-onderwerpen"></div>
+      <div class="navigatie"><button type="button" class="knop" id="wVerstuur">Wijziging versturen</button></div>
     </div>
   </section>
 
@@ -317,8 +401,8 @@
   </form>
 </main>
 
-<script src="config.js?v=1790533490"></script>
-<script src="validatie.js?v=1790533490"></script>
-<script src="app.js?v=1790533490"></script>
+<script src="config.js?v=1790534380"></script>
+<script src="validatie.js?v=1790534380"></script>
+<script src="app.js?v=1790534380"></script>
 </body>
 </html>

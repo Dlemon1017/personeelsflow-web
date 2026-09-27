@@ -196,3 +196,11 @@ body.lezer-open { overflow: hidden; }
 .lezer-voet { padding: 10px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--lijn); background: var(--kaart); }
 .lezer-voet .hint { text-align: center; margin: 0 0 8px; }
 .lezer-voet .knop { width: 100%; }
+
+/* Wijziging doorgeven */
+.knop.breed { width: 100%; }
+.knop.mt { margin-top: 14px; }
+.code-invoer { font-size: 28px; letter-spacing: 10px; text-align: center; font-variant-numeric: tabular-nums; }
+.w-onderwerp { border: 1px solid var(--lijn); border-radius: 12px; padding: 4px 14px 12px; margin-top: 12px; background: var(--kaart); }
+.w-onderwerp > .vinkje { margin-top: 10px; }
+.w-velden { margin-top: 4px; }
